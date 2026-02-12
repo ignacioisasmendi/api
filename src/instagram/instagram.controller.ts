@@ -3,6 +3,7 @@ import { InstagramService } from './instagram.service';
 import { CreatePostDto, SchedulePostDto } from './instagram.dto';
 import { GetUser } from '../decorators/get-user.decorator';
 import { User } from '@prisma/client';
+import { GetClientId } from 'src/decorators';
 
 @Controller('instagram')
 export class InstagramController {
@@ -18,11 +19,13 @@ export class InstagramController {
   @HttpCode(HttpStatus.CREATED)
   async schedulePost(
     @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Body() schedulePostDto: SchedulePostDto,
   ) {
     return this.instagramService.schedulePost(
       schedulePostDto,
       user.id,
+      clientId,
       schedulePostDto.socialAccountId,
     );
   }

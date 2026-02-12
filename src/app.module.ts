@@ -10,12 +10,19 @@ import { ConfigurationModule } from './config/config.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './users/user.module';
 import { ClsModule } from 'nestjs-cls';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Auth0Guard } from './auth/auth0.guard';
 import { IgOauthModule } from './oauth/instagram/ig-oauth/ig-oauth.module';
 import { TkOauthModule } from './oauth/tiktok/tk-oauth/tk-oauth.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { TiktokModule } from './tiktok/tiktok.module';
+import { CalendarModule } from './calendars/calendar.module';
+import { ShareLinkModule } from './share-links/share-link.module';
+import { PublicShareModule } from './public-share/public-share.module';
+import { ClientModule } from './clients/client.module';
+import { ClientInterceptor } from './interceptors/client.interceptor';
+import { PrismaService } from './prisma/prisma.service';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -39,14 +46,37 @@ import { TiktokModule } from './tiktok/tiktok.module';
     TkOauthModule,
     StorageModule,
     TiktokModule,
+    CalendarModule,
+    ShareLinkModule,
+    PublicShareModule,
+    ClientModule,
+    // Rate limiting: default is generous for authenticated endpoints
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 60000,   // 1 minute window
+        limit: 60,    // 60 requests per minute (default)
+      },
+      {
+        name: 'long',
+        ttl: 3600000,  // 1 hour window
+        limit: 1000,   // 1000 requests per hour
+      },
+    ]),
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    PrismaService,
     // Guard global para proteger todas las rutas por defecto
     {
       provide: APP_GUARD,
       useClass: Auth0Guard,
+    },
+    // Interceptor global para resolver el client desde X-Client-Id header
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ClientInterceptor,
     },
   ],
 })

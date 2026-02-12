@@ -26,34 +26,34 @@ export class PublicationService {
     private readonly publisherFactory: PublisherFactory,
   ) {}
 
-  async createPublication(dto: CreatePublicationDto, user: User): Promise<PublicationWithRelations> {
+  async createPublication(dto: CreatePublicationDto, clientId: string): Promise<PublicationWithRelations> {
     try {
-      // Verify content exists and belongs to user
+      // Verify content exists and belongs to client
       const content = await this.prisma.content.findFirst({
         where: {
           id: dto.contentId,
-          userId: user.id,
+          clientId,
         },
         include: { media: true },
       });
 
       if (!content) {
-        throw new BadRequestException('Content not found or does not belong to user');
+        throw new BadRequestException('Content not found or does not belong to this client');
       }
 
       // Verify all media IDs belong to this content
       const mediaIds = dto.mediaIds.map(m => m.mediaId);
       const validMedia = content.media.filter(m => mediaIds.includes(m.id));
-      
+
       if (validMedia.length !== mediaIds.length) {
         throw new BadRequestException('Some media IDs do not belong to this content');
       }
 
-      // Verify social account exists and belongs to user
+      // Verify social account exists and belongs to client
       const socialAccount = await this.prisma.socialAccount.findFirst({
         where: {
           id: dto.socialAccountId,
-          userId: user.id,
+          clientId,
           isActive: true,
         },
       });
@@ -202,17 +202,17 @@ export class PublicationService {
     platform?: string;
     status?: PublicationStatus;
     contentId?: string;
-    userId?: string;
+    clientId?: string;
   }): Promise<PublicationWithRelations[]> {
     return this.prisma.publication.findMany({
       where: {
         ...(filters?.platform && { platform: filters.platform as any }),
         ...(filters?.status && { status: filters.status }),
         ...(filters?.contentId && { contentId: filters.contentId }),
-        ...(filters?.userId && { 
-          content: { 
-            userId: filters.userId 
-          } 
+        ...(filters?.clientId && {
+          content: {
+            clientId: filters.clientId
+          }
         }),
       },
       include: { 

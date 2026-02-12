@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Body } from '@nestjs/common';
 import { UserService } from './user.service';
 import { GetUser } from '../decorators/get-user.decorator';
+import { GetClientId } from '../decorators';
 import { User } from '@prisma/client';
 import { IsOptional, IsString } from 'class-validator';
 
@@ -42,8 +43,8 @@ export class UserController {
    * GET /users/me/social-accounts
    */
   @Get('me/social-accounts')
-  async getSocialAccounts(@GetUser() user: User) {
-    return this.userService.getAllSocialAccounts(user.id);
+  async getSocialAccounts(@GetUser() user: User, @GetClientId() clientId: string) {
+    return this.userService.getAllSocialAccounts(user.id, clientId);
   }
 
   /**

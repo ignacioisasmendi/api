@@ -14,11 +14,8 @@ export class ContentService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createContent(dto: CreateContentDto, userId: string): Promise<ContentWithMedia> {
+  async createContent(dto: CreateContentDto, userId: string, clientId: string): Promise<ContentWithMedia> {
     try {
-      // Create content with media in a transaction
-      //instead of saving the url, change the uri part for this 
-
       const publicUrl = 'https://pub-d773025cd8974c48920973fa89738174.r2.dev';
       const key = dto.media[0].key;
       const url = `${publicUrl}/${key}`;
@@ -26,6 +23,7 @@ export class ContentService {
       const content = await this.prisma.content.create({
         data: {
           userId,
+          clientId,
           caption: dto.caption,
           media: {
             create: dto.media.map((m, index) => ({
@@ -56,9 +54,9 @@ export class ContentService {
     }
   }
 
-  async getContent(id: string, userId: string): Promise<ContentWithMedia> {
+  async getContent(id: string, clientId: string): Promise<ContentWithMedia> {
     const content = await this.prisma.content.findFirst({
-      where: { id, userId },
+      where: { id, clientId },
       include: {
         media: { orderBy: { order: 'asc' } },
         publications: {
@@ -76,9 +74,9 @@ export class ContentService {
     return content;
   }
 
-  async listContent(userId: string): Promise<ContentWithMedia[]> {
+  async listContent(clientId: string): Promise<ContentWithMedia[]> {
     return this.prisma.content.findMany({
-      where: { userId },
+      where: { clientId },
       include: {
         media: { orderBy: { order: 'asc' } },
         publications: {
@@ -91,9 +89,8 @@ export class ContentService {
     });
   }
 
-  async updateContent(id: string, userId: string, dto: UpdateContentDto): Promise<ContentWithMedia> {
-    // Verify ownership
-    await this.getContent(id, userId);
+  async updateContent(id: string, clientId: string, dto: UpdateContentDto): Promise<ContentWithMedia> {
+    await this.getContent(id, clientId);
 
     return this.prisma.content.update({
       where: { id },
@@ -107,11 +104,9 @@ export class ContentService {
     });
   }
 
-  async addMedia(id: string, userId: string, dto: AddMediaToContentDto): Promise<ContentWithMedia> {
-    // Verify ownership
-    await this.getContent(id, userId);
+  async addMedia(id: string, clientId: string, dto: AddMediaToContentDto): Promise<ContentWithMedia> {
+    await this.getContent(id, clientId);
 
-    // Get current max order
     const maxOrder = await this.prisma.media.findFirst({
       where: { contentId: id },
       orderBy: { order: 'desc' },
@@ -145,11 +140,9 @@ export class ContentService {
     });
   }
 
-  async deleteContent(id: string, userId: string): Promise<void> {
-    // Verify ownership
-    const content = await this.getContent(id, userId);
+  async deleteContent(id: string, clientId: string): Promise<void> {
+    const content = await this.getContent(id, clientId);
 
-    // Check if content has any non-errored publications
     const activePublications = content.publications.filter(
       (p) => p.status !== 'ERROR',
     );
@@ -164,12 +157,11 @@ export class ContentService {
     this.logger.log(`Deleted content ${id}`);
   }
 
-  async deleteMedia(mediaId: string, userId: string): Promise<void> {
-    // Find media and verify ownership
+  async deleteMedia(mediaId: string, clientId: string): Promise<void> {
     const media = await this.prisma.media.findFirst({
       where: {
         id: mediaId,
-        content: { userId },
+        content: { clientId },
       },
       include: {
         publicationUsage: true,

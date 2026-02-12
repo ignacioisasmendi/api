@@ -18,14 +18,35 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  clients        Client[]
   contents       Content[]
   socialAccounts SocialAccount[]
   oauthStates    OAuthState[]
+  calendars      Calendar[]
+  comments       Comment[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   @db.VarChar(100)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendars      Calendar[]
+  contents       Content[]
+  socialAccounts SocialAccount[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model SocialAccount {
   id             String    @id @default(cuid())
   userId         String
+  clientId       String
   platform       Platform
   accessToken    String? // Deberías encriptar esto en la aplicación
   refreshToken   String? // Para renovar el accessToken
@@ -39,26 +60,34 @@ model SocialAccount {
   updatedAt      DateTime  @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   publications Publication[]
 
-  @@unique([userId, platform, platformUserId])
+  @@unique([clientId, platform, platformUserId])
   @@index([userId])
+  @@index([clientId])
   @@index([platform])
   @@index([disconnectedAt])
 }
 
 model Content {
-  id        String   @id @default(cuid())
-  userId    String
-  caption   String?  // The actual post text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  clientId   String
+  calendarId String?  // nullable for migration; required long-term
+  caption    String?  // The actual post text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  calendar     Calendar?     @relation(fields: [calendarId], references: [id], onDelete: SetNull)
   publications Publication[]
   media        Media[]
 
   @@index([userId])
+  @@index([clientId])
+  @@index([calendarId])
 }
 
 
@@ -81,6 +110,7 @@ model Publication {
   content       Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
   socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
   mediaUsage    PublicationMedia[] // New relation!
+  comments      Comment[]
 
   @@index([publishAt])
   @@index([status])
@@ -172,6 +202,74 @@ enum MediaType {
   THUMBNAIL
 }
 
+enum SharePermission {
+  VIEW_ONLY
+  VIEW_AND_COMMENT
+}
+
+model Calendar {
+  id          String   @id @default(cuid())
+  userId      String
+  clientId    String
+  name        String   // e.g. "Acme Corp - Q1 2026"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client     Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contents   Content[]
+  shareLinks CalendarShareLink[]
+  comments   Comment[]
+
+  @@index([userId])
+  @@index([clientId])
+}
+
+model CalendarShareLink {
+  id             String          @id @default(cuid())
+  calendarId     String
+  tokenHash      String          @unique // SHA-256 hash of the raw token
+  label          String?         // human-readable name e.g. "For client review"
+  permission     SharePermission @default(VIEW_AND_COMMENT)
+  isActive       Boolean         @default(true)
+  expiresAt      DateTime?       // null = never expires
+  createdAt      DateTime        @default(now())
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  accessCount    Int             @default(0)
+
+  calendar Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  comments Comment[]
+
+  @@index([calendarId])
+  @@index([tokenHash])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  calendarId    String
+  publicationId String?  // optional: comment on a specific publication
+  authorName    String   // required display name from client
+  authorEmail   String?  // optional, for future notifications
+  body          String
+  shareLinkId   String?  // which link was used (null = manager comment)
+  userId        String?  // null for external commenters
+  commenterId   String?  // browser session ID for edit/delete ownership
+  isResolved    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  calendar    Calendar           @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  publication Publication?       @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+  shareLink   CalendarShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([calendarId])
+  @@index([publicationId])
+  @@index([shareLinkId])
+  @@index([commenterId])
+}
 
 model WaitlistEntry {
   id        String   @id @default(cuid())

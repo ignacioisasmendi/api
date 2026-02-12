@@ -1,8 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { GenerateUploadUrlDto, UploadUrlResponseDto } from './dto/storage.dto';
-import { GetUser } from '../../decorators/get-user.decorator';
-import { User } from '@prisma/client';
+import { GetClientId } from '../../decorators/get-client-id.decorator';
 
 @Controller('storage')
 export class StorageController {
@@ -15,13 +14,13 @@ export class StorageController {
   @Post('upload-url')
   @HttpCode(HttpStatus.OK)
   async generateUploadUrl(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Body() dto: GenerateUploadUrlDto,
   ): Promise<UploadUrlResponseDto> {
     // Generate a unique key for this upload
     const timestamp = Date.now();
     const sanitizedFilename = dto.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const key = `users/${user.id}/uploads/${timestamp}_${sanitizedFilename}`;
+    const key = `clients/${clientId}/uploads/${timestamp}_${sanitizedFilename}`;
 
     // Generate presigned URL
     const uploadUrl = await this.storageService.generateUploadUrl(

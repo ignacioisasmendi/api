@@ -82,9 +82,9 @@ export class StorageService {
   /**
    * Generate storage key for user content
    */
-  generateKey(userId: string, contentId: string, filename: string): string {
+  generateKey(clientId: string, contentId: string, filename: string): string {
     const timestamp = Date.now();
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return `users/${userId}/content/${contentId}/${timestamp}_${sanitizedFilename}`;
+    return `clients/${clientId}/content/${contentId}/${timestamp}_${sanitizedFilename}`;
   }
 }

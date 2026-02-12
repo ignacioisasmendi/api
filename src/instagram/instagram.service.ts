@@ -107,15 +107,15 @@ export class InstagramService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async schedulePost(schedulePostDto: SchedulePostDto, userId: string, socialAccountId: string): Promise<Publication> {
+  async schedulePost(schedulePostDto: SchedulePostDto, userId: string, clientId: string, socialAccountId: string): Promise<Publication> {
     try {
       this.logger.log('Creating scheduled post...');
 
-      // Verificar que la cuenta social existe y pertenece al usuario
+      // Verificar que la cuenta social existe y pertenece al cliente
       const socialAccount = await this.prisma.socialAccount.findFirst({
         where: {
           id: socialAccountId,
-          userId: userId,
+          clientId: clientId,
           platform: 'INSTAGRAM',
           disconnectedAt: null,
         },
@@ -138,6 +138,7 @@ export class InstagramService {
         data: {
           caption: schedulePostDto.caption,
           userId: userId,
+          clientId: clientId,
         },
       });
 

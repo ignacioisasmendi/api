@@ -13,8 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { User } from '@prisma/client';
-import { GetUser } from '../decorators/get-user.decorator';
+import { GetClientId } from '../decorators/get-client-id.decorator';
 import { TiktokCreatorService } from './creator/tiktok-creator.service';
 import { TiktokPostService } from './post/tiktok-post.service';
 import { InitDirectPostDto } from './post/dto/init-direct-post.dto';
@@ -63,12 +62,12 @@ export class TiktokController {
    */
   @Get('creator-info/:socialAccountId')
   async getCreatorInfo(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Param('socialAccountId') socialAccountId: string,
   ) {
     const socialAccount = await this.findAndValidateSocialAccount(
       socialAccountId,
-      user.id,
+      clientId,
     );
 
     const creatorInfo = await this.tiktokPostService.executeWithTokenRefresh(
@@ -105,12 +104,12 @@ export class TiktokController {
   @Post('publish/init')
   @HttpCode(HttpStatus.OK)
   async initDirectPost(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Body() body: InitDirectPostWithAccountDto,
   ) {
     const socialAccount = await this.findAndValidateSocialAccount(
       body.socialAccountId,
-      user.id,
+      clientId,
     );
 
     const initData = await this.tiktokPostService.executeWithTokenRefresh(
@@ -170,7 +169,7 @@ export class TiktokController {
     }),
   )
   async uploadAndPublish(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Param('socialAccountId') socialAccountId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: UploadPublishBodyDto,
@@ -181,7 +180,7 @@ export class TiktokController {
 
     const socialAccount = await this.findAndValidateSocialAccount(
       socialAccountId,
-      user.id,
+      clientId,
     );
 
     // Temp file path written by Multer
@@ -247,16 +246,16 @@ export class TiktokController {
 
   /**
    * Load a SocialAccount from the DB and verify it belongs to the
-   * authenticated user, is active, and is a TikTok account.
+   * authenticated client, is active, and is a TikTok account.
    */
   private async findAndValidateSocialAccount(
     socialAccountId: string,
-    userId: string,
+    clientId: string,
   ) {
     const socialAccount = await this.prismaService.socialAccount.findFirst({
       where: {
         id: socialAccountId,
-        userId,
+        clientId,
         platform: 'TIKTOK',
         isActive: true,
         disconnectedAt: null,

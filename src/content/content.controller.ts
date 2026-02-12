@@ -13,6 +13,7 @@ import { ContentService } from './content.service';
 import { CreateContentDto, UpdateContentDto, AddMediaToContentDto } from './dto/content.dto';
 import { GetUser } from '../decorators/get-user.decorator';
 import { User } from '@prisma/client';
+import { GetClientId } from 'src/decorators';
 
 @Controller('content')
 export class ContentController {
@@ -24,17 +25,17 @@ export class ContentController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@GetUser() user: User, @Body() dto: CreateContentDto) {
-    return this.contentService.createContent(dto, user.id);
+  async create(@GetUser() user: User, @GetClientId() clientId: string, @Body() dto: CreateContentDto) {
+    return this.contentService.createContent(dto, user.id, clientId);
   }
 
   /**
-   * Get all content for the authenticated user
+   * Get all content for the authenticated client
    * GET /content
    */
   @Get()
-  async list(@GetUser() user: User) {
-    return this.contentService.listContent(user.id);
+  async list(@GetClientId() clientId: string) {
+    return this.contentService.listContent(clientId);
   }
 
   /**
@@ -42,8 +43,8 @@ export class ContentController {
    * GET /content/:id
    */
   @Get(':id')
-  async get(@GetUser() user: User, @Param('id') id: string) {
-    return this.contentService.getContent(id, user.id);
+  async get(@GetClientId() clientId: string, @Param('id') id: string) {
+    return this.contentService.getContent(id, clientId);
   }
 
   /**
@@ -52,11 +53,11 @@ export class ContentController {
    */
   @Patch(':id')
   async update(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Param('id') id: string,
     @Body() dto: UpdateContentDto,
   ) {
-    return this.contentService.updateContent(id, user.id, dto);
+    return this.contentService.updateContent(id, clientId, dto);
   }
 
   /**
@@ -66,11 +67,11 @@ export class ContentController {
   @Post(':id/media')
   @HttpCode(HttpStatus.OK)
   async addMedia(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Param('id') id: string,
     @Body() dto: AddMediaToContentDto,
   ) {
-    return this.contentService.addMedia(id, user.id, dto);
+    return this.contentService.addMedia(id, clientId, dto);
   }
 
   /**
@@ -79,8 +80,8 @@ export class ContentController {
    */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@GetUser() user: User, @Param('id') id: string) {
-    await this.contentService.deleteContent(id, user.id);
+  async delete(@GetClientId() clientId: string, @Param('id') id: string) {
+    await this.contentService.deleteContent(id, clientId);
   }
 
   /**
@@ -89,7 +90,7 @@ export class ContentController {
    */
   @Delete('media/:mediaId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteMedia(@GetUser() user: User, @Param('mediaId') mediaId: string) {
-    await this.contentService.deleteMedia(mediaId, user.id);
+  async deleteMedia(@GetClientId() clientId: string, @Param('mediaId') mediaId: string) {
+    await this.contentService.deleteMedia(mediaId, clientId);
   }
 }

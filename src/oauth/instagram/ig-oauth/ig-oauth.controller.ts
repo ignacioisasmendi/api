@@ -3,7 +3,7 @@ import { IgOauthService } from './ig-oauth.service';
 import { IsPublic } from 'src/decorators/public.decorator';
 import type { Request, Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { GetUser } from 'src/decorators';
+import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { IgOauthCallbackDto } from './dto/ig-oauth-callback.dto';
 
@@ -24,28 +24,30 @@ export class IgOauthController {
 
   @Post('callback')
   async handleCallback(
-    @Body() body: IgOauthCallbackDto, 
-    @GetUser() user: User
+    @Body() body: IgOauthCallbackDto,
+    @GetUser() user: User,
+    @GetClientId() clientId: string,
   ) {
     // 1. Validar el state para prevenir CSRF
     // 2. Intercambiar el código por un access token
     const tokenData = await this.igOauthService.exchangeCodeForToken(body.code);
-    
+
     // 3. Obtener información del usuario de Instagram
     const instagramUser = await this.igOauthService.getUserInfo(tokenData.access_token);
-    
-    // 4. Guardar el access token en tu DB asociado al usuario actual
+
+    // 4. Guardar el access token en tu DB asociado al usuario y client actual
     await this.prismaService.socialAccount.create({
       data: {
         userId: user.id,
+        clientId,
         platform: 'INSTAGRAM',
         accessToken: tokenData.access_token,
         platformUserId: instagramUser.id,
         username: instagramUser.username,
         expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60) // 60 dias
       }
-    }); 
-    
+    });
+
     return { success: true };
   }
 }

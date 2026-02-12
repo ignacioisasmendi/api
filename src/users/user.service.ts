@@ -49,7 +49,7 @@ export class UserService {
         return user;
       }
 
-      // Usuario no existe - crear nuevo
+      // Usuario no existe - crear nuevo con un client por defecto
       this.logger.log(`Creating new user for Auth0 ID: ${userData.auth0UserId}`);
       user = await this.prisma.user.create({
         data: {
@@ -57,10 +57,15 @@ export class UserService {
           email: userData.email,
           name: userData.name,
           avatar: userData.avatar,
+          clients: {
+            create: {
+              name: userData.name || userData.email.split('@')[0],
+            },
+          },
         },
       });
 
-      this.logger.log(`New user created with ID: ${user.id}`);
+      this.logger.log(`New user created with ID: ${user.id} (with default client)`);
       return user;
     } catch (error) {
       this.logger.error('Error in findOrCreateUser', error);
@@ -121,9 +126,9 @@ export class UserService {
   /**
    * Obtiene todas las cuentas sociales de un usuario (activas e inactivas)
    */
-  async getAllSocialAccounts(userId: string) {
+  async getAllSocialAccounts(userId: string, clientId?: string) {
     const accounts = await this.prisma.socialAccount.findMany({
-      where: { userId },
+      where: { userId, ...(clientId && { clientId }) },
       select: {
         id: true,
         platform: true,

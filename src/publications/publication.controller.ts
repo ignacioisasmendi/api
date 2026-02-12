@@ -11,13 +11,13 @@ import {
   HttpStatus 
 } from '@nestjs/common';
 import { PublicationService } from './publication.service';
-import { 
-  CreatePublicationDto, 
-  BulkCreatePublicationDto, 
-  UpdatePublicationDto 
+import {
+  CreatePublicationDto,
+  BulkCreatePublicationDto,
+  UpdatePublicationDto
 } from './dto/publication.dto';
-import { PublicationStatus, Platform, User } from '@prisma/client';
-import { GetUser } from '../decorators/get-user.decorator';
+import { PublicationStatus, Platform } from '@prisma/client';
+import { GetClientId } from 'src/decorators';
 
 @Controller('publications')
 export class PublicationController {
@@ -29,8 +29,8 @@ export class PublicationController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@GetUser() user: User, @Body() dto: CreatePublicationDto) {
-    return this.publicationService.createPublication(dto, user);
+  async create(@GetClientId() clientId: string, @Body() dto: CreatePublicationDto) {
+    return this.publicationService.createPublication(dto, clientId);
   }
 
   /**
@@ -49,16 +49,16 @@ export class PublicationController {
    */
   @Get()
   async list(
-    @GetUser() user: User,
+    @GetClientId() clientId: string,
     @Query('platform') platform?: Platform,
     @Query('status') status?: PublicationStatus,
-    @Query('contentId') contentId?: string,
+    @Query('contentId') contentId?: string
   ) {
     return this.publicationService.listPublications({
+      clientId,
       platform,
       status,
       contentId,
-      userId: user.id,
     });
   }
 
@@ -103,11 +103,14 @@ export class InstagramPublicationController {
    * GET /instagram/publications
    */
   @Get()
-  async list(@GetUser() user: User, @Query('status') status?: PublicationStatus) {
+  async list(
+    @GetClientId() clientId: string, 
+    @Query('status') status?: PublicationStatus
+  ) {
     return this.publicationService.listPublications({
       platform: Platform.INSTAGRAM,
       status,
-      userId: user.id,
+      clientId,
     });
   }
 }
@@ -121,11 +124,14 @@ export class FacebookPublicationController {
    * GET /facebook/publications
    */
   @Get()
-  async list(@GetUser() user: User, @Query('status') status?: PublicationStatus) {
+  async list(
+    @GetClientId() clientId: string, 
+    @Query('status') status?: PublicationStatus
+  ) {
     return this.publicationService.listPublications({
       platform: Platform.FACEBOOK,
       status,
-      userId: user.id,
+      clientId,
     });
   }
 }
@@ -139,11 +145,14 @@ export class TikTokPublicationController {
    * GET /tiktok/publications
    */
   @Get()
-  async list(@GetUser() user: User, @Query('status') status?: PublicationStatus) {
+  async list(
+    @GetClientId() clientId: string, 
+    @Query('status') status?: PublicationStatus
+  ) {
     return this.publicationService.listPublications({
       platform: Platform.TIKTOK,
       status,
-      userId: user.id,
+      clientId,
     });
   }
 }
@@ -157,11 +166,14 @@ export class XPublicationController {
    * GET /x/publications
    */
   @Get()
-  async list(@GetUser() user: User, @Query('status') status?: PublicationStatus) {
+  async list(
+    @GetClientId() clientId: string, 
+    @Query('status') status?: PublicationStatus
+  ) {
     return this.publicationService.listPublications({
       platform: Platform.X,
       status,
-      userId: user.id,
+      clientId,
     });
   }
 }

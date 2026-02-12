@@ -3,15 +3,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './interceptors';
 import { AllExceptionsFilter } from './filters';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable cookie parsing for commenter session cookies
+  app.use(cookieParser());
   
   app.enableCors({
     origin: 'https://app.planer.com.ar',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Id'],
   });
   
   // Enable validation globally
