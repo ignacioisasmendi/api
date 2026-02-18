@@ -35,7 +35,9 @@ export class Auth0Guard implements CanActivate {
     this.jwksClient = jwksClient({
       jwksUri: `https://${auth0Domain}/.well-known/jwks.json`,
       cache: true,
+      cacheMaxAge: 86_400_000, // 24 hours — signing keys rarely rotate
       rateLimit: true,
+      jwksRequestsPerMinute: 10,
     });
   }
 

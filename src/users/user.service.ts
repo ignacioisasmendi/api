@@ -1,6 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User } from '@prisma/client';
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface CreateUserData {
   auth0UserId: string;
@@ -92,6 +101,20 @@ export class UserService {
   }
 
   /**
+   * Maps a User entity to a safe response object, stripping auth0UserId
+   */
+  mapToResponse(user: User): UserResponse {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  /**
    * Actualiza un usuario
    */
   async updateUser(
@@ -109,16 +132,57 @@ export class UserService {
   }
 
   /**
-   * Obtiene todas las cuentas sociales de un usuario
+   * Obtiene el usuario con sus cuentas sociales activas (sin tokens sensibles)
    */
   async getUserWithSocialAccounts(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        createdAt: true,
+        updatedAt: true,
         socialAccounts: {
           where: { disconnectedAt: null },
+          select: {
+            id: true,
+            platform: true,
+            platformUserId: true,
+            username: true,
+            isActive: true,
+            expiresAt: true,
+            disconnectedAt: true,
+            createdAt: true,
+            updatedAt: true,
+            // accessToken and refreshToken intentionally excluded
+          },
           orderBy: { createdAt: 'desc' },
         },
+      },
+    });
+  }
+
+  /**
+   * Desconecta una cuenta social (soft delete)
+   */
+  async disconnectSocialAccount(userId: string, socialAccountId: string) {
+    const account = await this.prisma.socialAccount.findFirst({
+      where: { id: socialAccountId, userId, disconnectedAt: null },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Social account not found');
+    }
+
+    return this.prisma.socialAccount.update({
+      where: { id: socialAccountId },
+      data: {
+        disconnectedAt: new Date(),
+        isActive: false,
+        accessToken: null,
+        refreshToken: null,
       },
     });
   }

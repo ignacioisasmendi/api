@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContentDto, UpdateContentDto, AddMediaToContentDto } from './dto/content.dto';
 import { Content, Media, Prisma } from '@prisma/client';
@@ -12,14 +13,13 @@ type ContentWithMedia = Prisma.ContentGetPayload<{
 export class ContentService {
   private readonly logger = new Logger(ContentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async createContent(dto: CreateContentDto, userId: string, clientId: string): Promise<ContentWithMedia> {
     try {
-      const publicUrl = 'https://pub-d773025cd8974c48920973fa89738174.r2.dev';
-      const key = dto.media[0].key;
-      const url = `${publicUrl}/${key}`;
-
       const content = await this.prisma.content.create({
         data: {
           userId,
@@ -27,7 +27,7 @@ export class ContentService {
           caption: dto.caption,
           media: {
             create: dto.media.map((m, index) => ({
-              url: url,
+              url: m.url, // Use each media item's own URL from the DTO
               key: m.key,
               type: m.type,
               mimeType: m.mimeType,

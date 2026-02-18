@@ -1,19 +1,9 @@
-import { Controller, Get, Put, Body } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, Param, Put, Body } from '@nestjs/common';
 import { UserService } from './user.service';
 import { GetUser } from '../decorators/get-user.decorator';
 import { GetClientId } from '../decorators';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '@prisma/client';
-import { IsOptional, IsString } from 'class-validator';
-
-class UpdateUserDto {
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @IsString()
-  @IsOptional()
-  avatar?: string;
-}
 
 @Controller('users')
 export class UserController {
@@ -25,12 +15,11 @@ export class UserController {
    */
   @Get('me')
   async getProfile(@GetUser() user: User) {
-    // El usuario ya viene completo desde el guard
-    return user;
+    return this.userService.mapToResponse(user);
   }
 
   /**
-   * Obtener el perfil con cuentas sociales
+   * Obtener el perfil con cuentas sociales (sin tokens sensibles)
    * GET /users/me/full
    */
   @Get('me/full')
@@ -48,11 +37,25 @@ export class UserController {
   }
 
   /**
+   * Desconectar una cuenta social
+   * DELETE /users/me/social-accounts/:id
+   */
+  @Delete('me/social-accounts/:id')
+  @HttpCode(204)
+  async disconnectSocialAccount(
+    @GetUser() user: User,
+    @Param('id') socialAccountId: string,
+  ) {
+    await this.userService.disconnectSocialAccount(user.id, socialAccountId);
+  }
+
+  /**
    * Actualizar el perfil del usuario
    * PUT /users/me
    */
   @Put('me')
   async updateProfile(@GetUser() user: User, @Body() dto: UpdateUserDto) {
-    return this.userService.updateUser(user.id, dto);
+    const updated = await this.userService.updateUser(user.id, dto);
+    return this.userService.mapToResponse(updated);
   }
 }

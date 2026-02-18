@@ -1,12 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Publication } from '@prisma/client';
-import { IPlatformPublisher, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
+import { IPlatformPublisher, PublicationWithRelations, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
 import { TiktokCreatorService } from '../tiktok/creator/tiktok-creator.service';
 import { TiktokPostService } from '../tiktok/post/tiktok-post.service';
 import { InitDirectPostDto } from '../tiktok/post/dto/init-direct-post.dto';
 import { TikTokPrivacyLevel, TikTokSourceType } from '../tiktok/tiktok.constants';
 import { isFileUploadInitData } from '../tiktok/tiktok.types';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TikTokPublisher implements IPlatformPublisher {
@@ -15,10 +13,9 @@ export class TikTokPublisher implements IPlatformPublisher {
   constructor(
     private readonly tiktokCreatorService: TiktokCreatorService,
     private readonly tiktokPostService: TiktokPostService,
-    private readonly prismaService: PrismaService,
   ) {}
 
-  async validatePayload(payload: any, format: string): Promise<ValidationResult> {
+  async validatePayload(payload: Record<string, unknown>, _format: string): Promise<ValidationResult> {
     const errors: string[] = [];
 
     if (!payload.video_url && !payload.file_path) {
@@ -29,7 +26,7 @@ export class TikTokPublisher implements IPlatformPublisher {
       errors.push('description or title is required for TikTok');
     }
 
-    if (payload.description && payload.description.length > 150) {
+    if (typeof payload.description === 'string' && payload.description.length > 150) {
       errors.push('TikTok video description must be 150 characters or fewer');
     }
 
@@ -39,32 +36,11 @@ export class TikTokPublisher implements IPlatformPublisher {
     };
   }
 
-  async publish(publication: Publication): Promise<PublishResult> {
+  async publish(publication: PublicationWithRelations): Promise<PublishResult> {
     try {
       this.logger.log(`Publishing to TikTok: ${publication.id}`);
 
-      // 1. Load full publication with relations
-      const fullPublication = await this.prismaService.publication.findUnique({
-        where: { id: publication.id },
-        include: {
-          content: true,
-          socialAccount: true,
-          mediaUsage: {
-            include: { media: true },
-            orderBy: { order: 'asc' },
-          },
-        },
-      });
-
-      if (!fullPublication) {
-        return {
-          success: false,
-          message: 'Publication not found',
-          error: 'Could not load publication data',
-        };
-      }
-
-      const { socialAccount, content, mediaUsage } = fullPublication;
+      const { socialAccount, content, mediaUsage } = publication;
 
       if (!socialAccount.accessToken || !socialAccount.refreshToken) {
         return {
@@ -83,9 +59,9 @@ export class TikTokPublisher implements IPlatformPublisher {
       }
 
       const videoMedia = mediaUsage[0].media;
-      const caption = fullPublication.customCaption || content.caption || '';
+      const caption = publication.customCaption || content.caption || '';
 
-      // 2. Use auto-retry wrapper to handle token expiration
+      // Use auto-retry wrapper to handle token expiration
       return await this.tiktokPostService.executeWithTokenRefresh(
         socialAccount.id,
         socialAccount.refreshToken,
@@ -95,16 +71,13 @@ export class TikTokPublisher implements IPlatformPublisher {
             accessToken,
             caption,
             videoMedia,
-            fullPublication.platformConfig as Record<string, any> | null,
-            fullPublication.id,
+            publication.platformConfig as Record<string, unknown> | null,
+            publication.id,
           );
         },
       );
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to publish to TikTok: ${error.message}`,
-        error.stack,
-      );
+    } catch (error) {
+      this.logger.error(`Failed to publish to TikTok: ${error.message}`, error.stack);
       return {
         success: false,
         message: 'Failed to publish to TikTok',
@@ -120,17 +93,15 @@ export class TikTokPublisher implements IPlatformPublisher {
     accessToken: string,
     caption: string,
     videoMedia: { url: string; size: number; type: string },
-    platformConfig: Record<string, any> | null,
+    platformConfig: Record<string, unknown> | null,
     publicationId: string,
   ): Promise<PublishResult> {
     // 1. Query creator info to validate privacy level support
-    const creatorInfo =
-      await this.tiktokCreatorService.queryCreatorInfo(accessToken);
+    const creatorInfo = await this.tiktokCreatorService.queryCreatorInfo(accessToken);
 
     // Determine privacy level — use platformConfig override or default to SELF_ONLY
     const requestedPrivacy =
-      (platformConfig?.privacy_level as TikTokPrivacyLevel) ??
-      TikTokPrivacyLevel.SELF_ONLY;
+      (platformConfig?.privacy_level as TikTokPrivacyLevel) ?? TikTokPrivacyLevel.SELF_ONLY;
 
     if (!creatorInfo.privacy_level_options.includes(requestedPrivacy)) {
       this.logger.warn(
@@ -138,33 +109,21 @@ export class TikTokPublisher implements IPlatformPublisher {
       );
     }
 
-    const effectivePrivacy = creatorInfo.privacy_level_options.includes(
-      requestedPrivacy,
-    )
+    const effectivePrivacy = creatorInfo.privacy_level_options.includes(requestedPrivacy)
       ? requestedPrivacy
       : (creatorInfo.privacy_level_options[0] as TikTokPrivacyLevel);
 
     // 2. Determine source type
-    //    If the video is in object storage (has a public URL), use PULL_FROM_URL.
-    //    Otherwise, use FILE_UPLOAD with a local file path.
-    const isPublicUrl =
-      videoMedia.url.startsWith('http://') ||
-      videoMedia.url.startsWith('https://');
-
-    const sourceType = isPublicUrl
-      ? TikTokSourceType.PULL_FROM_URL
-      : TikTokSourceType.FILE_UPLOAD;
+    const isPublicUrl = videoMedia.url.startsWith('http://') || videoMedia.url.startsWith('https://');
+    const sourceType = isPublicUrl ? TikTokSourceType.PULL_FROM_URL : TikTokSourceType.FILE_UPLOAD;
 
     // 3. Build the DTO
     const dto = new InitDirectPostDto();
     dto.title = caption.substring(0, 150); // TikTok title max 150 chars
     dto.privacy_level = effectivePrivacy;
-    dto.disable_comment =
-      platformConfig?.disable_comment ?? creatorInfo.comment_disabled;
-    dto.disable_duet =
-      platformConfig?.disable_duet ?? creatorInfo.duet_disabled;
-    dto.disable_stitch =
-      platformConfig?.disable_stitch ?? creatorInfo.stitch_disabled;
+    dto.disable_comment = (platformConfig?.disable_comment as boolean) ?? creatorInfo.comment_disabled;
+    dto.disable_duet = (platformConfig?.disable_duet as boolean) ?? creatorInfo.duet_disabled;
+    dto.disable_stitch = (platformConfig?.disable_stitch as boolean) ?? creatorInfo.stitch_disabled;
     dto.source_type = sourceType;
 
     if (sourceType === TikTokSourceType.PULL_FROM_URL) {
@@ -175,26 +134,14 @@ export class TikTokPublisher implements IPlatformPublisher {
     }
 
     // 4. Initialize the direct post
-    const initData = await this.tiktokPostService.initDirectPost(
-      accessToken,
-      dto,
-    );
+    const initData = await this.tiktokPostService.initDirectPost(accessToken, dto);
 
     // 5. Upload the video if FILE_UPLOAD
-    if (
-      sourceType === TikTokSourceType.FILE_UPLOAD &&
-      isFileUploadInitData(initData)
-    ) {
-      await this.tiktokPostService.uploadVideo(
-        initData.upload_url,
-        dto.file_path!,
-        dto.video_size!,
-      );
+    if (sourceType === TikTokSourceType.FILE_UPLOAD && isFileUploadInitData(initData)) {
+      await this.tiktokPostService.uploadVideo(initData.upload_url, dto.file_path!, dto.video_size!);
     }
 
-    this.logger.log(
-      `TikTok post initiated successfully — publish_id: ${initData.publish_id}`,
-    );
+    this.logger.log(`TikTok post initiated successfully — publish_id: ${initData.publish_id}`);
 
     return {
       success: true,

@@ -21,11 +21,23 @@ import { ShareLinkModule } from './share-links/share-link.module';
 import { PublicShareModule } from './public-share/public-share.module';
 import { ClientModule } from './clients/client.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true, singleLine: true } }
+            : undefined,
+        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        autoLogging: false,
+      },
+    }),
     // CLS Module - Para manejar el contexto de la request
     ClsModule.forRoot({
       global: true,
@@ -72,6 +84,16 @@ import { ThrottlerModule } from '@nestjs/throttler';
     {
       provide: APP_GUARD,
       useClass: Auth0Guard,
+    },
+    // Global rate limiting (configured above in ThrottlerModule)
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // Logging interceptor runs first (outermost) to capture all requests
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
     },
     // Interceptor global para resolver el client desde X-Client-Id header
     {

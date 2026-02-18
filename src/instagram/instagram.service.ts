@@ -149,6 +149,9 @@ export class InstagramService {
       const publishDate = new Date(schedulePostDto.publishAt);
       publishDate.setHours(publishDate.getHours() + 3);
 
+      console.log('publishDate', publishDate);
+      
+
       // Create publication (without media - will fail on publish)
       const publication = await this.prisma.publication.create({
         data: {

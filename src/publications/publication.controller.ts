@@ -1,23 +1,23 @@
-import { 
-  Controller, 
-  Post, 
-  Get, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Param,
   Query,
-  HttpCode, 
-  HttpStatus 
+  HttpCode,
+  HttpStatus
 } from '@nestjs/common';
 import { PublicationService } from './publication.service';
 import {
   CreatePublicationDto,
-  BulkCreatePublicationDto,
   UpdatePublicationDto
 } from './dto/publication.dto';
 import { PublicationStatus, Platform } from '@prisma/client';
 import { GetClientId } from 'src/decorators';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('publications')
 export class PublicationController {
@@ -34,84 +34,74 @@ export class PublicationController {
   }
 
   /**
-   * Create multiple publications for the same content
-   * POST /publications/bulk
-   */
- /*  @Post('bulk')
-  @HttpCode(HttpStatus.CREATED)
-  async bulkCreate(@GetUser() user: User, @Body() dto: BulkCreatePublicationDto) {
-    return this.publicationService.bulkCreatePublications(dto, user.id);
-  } */
-
-  /**
-   * Get all publications with optional filters
-   * GET /publications?platform=INSTAGRAM&status=SCHEDULED
+   * Get all publications with optional filters (paginated)
+   * GET /publications?platform=INSTAGRAM&status=SCHEDULED&page=1&limit=20
    */
   @Get()
   async list(
     @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
     @Query('platform') platform?: Platform,
     @Query('status') status?: PublicationStatus,
-    @Query('contentId') contentId?: string
+    @Query('contentId') contentId?: string,
+    @Query('calendarId') calendarId?: string,
   ) {
-    return this.publicationService.listPublications({
-      clientId,
-      platform,
-      status,
-      contentId,
-    });
+    return this.publicationService.listPublications(
+      { clientId, platform, status, contentId, calendarId },
+      pagination,
+    );
   }
 
   /**
-   * Get a specific publication by ID
+   * Get a specific publication by ID (ownership enforced via clientId)
    * GET /publications/:id
    */
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.publicationService.getPublication(id);
+  async getOne(@GetClientId() clientId: string, @Param('id') id: string) {
+    return this.publicationService.getPublication(id, clientId);
   }
 
   /**
-   * Update a publication
+   * Update a publication (ownership enforced via clientId)
    * PUT /publications/:id
    */
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdatePublicationDto) {
-    return this.publicationService.updatePublication(id, dto);
+  async update(
+    @GetClientId() clientId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdatePublicationDto,
+  ) {
+    return this.publicationService.updatePublication(id, clientId, dto);
   }
 
   /**
-   * Delete a publication
+   * Delete a publication (ownership enforced via clientId)
    * DELETE /publications/:id
    */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: string) {
-    await this.publicationService.deletePublication(id);
+  async delete(@GetClientId() clientId: string, @Param('id') id: string) {
+    await this.publicationService.deletePublication(id, clientId);
   }
 }
 
 /**
- * Platform-specific controllers for specialized operations
+ * Platform-specific controllers for filtered list endpoints
  */
 @Controller('instagram/publications')
 export class InstagramPublicationController {
   constructor(private readonly publicationService: PublicationService) {}
 
-  /**
-   * Get all Instagram publications
-   * GET /instagram/publications
-   */
   @Get()
   async list(
-    @GetClientId() clientId: string, 
-    @Query('status') status?: PublicationStatus
+    @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: PublicationStatus,
   ) {
-    return this.publicationService.listPublications({
-      platform: Platform.INSTAGRAM,
-      status,
-      clientId,
-    });
+    return this.publicationService.listPublications(
+      { platform: Platform.INSTAGRAM, status, clientId },
+      pagination,
+    );
   }
 }
 
@@ -119,20 +109,16 @@ export class InstagramPublicationController {
 export class FacebookPublicationController {
   constructor(private readonly publicationService: PublicationService) {}
 
-  /**
-   * Get all Facebook publications
-   * GET /facebook/publications
-   */
   @Get()
   async list(
-    @GetClientId() clientId: string, 
-    @Query('status') status?: PublicationStatus
+    @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: PublicationStatus,
   ) {
-    return this.publicationService.listPublications({
-      platform: Platform.FACEBOOK,
-      status,
-      clientId,
-    });
+    return this.publicationService.listPublications(
+      { platform: Platform.FACEBOOK, status, clientId },
+      pagination,
+    );
   }
 }
 
@@ -140,20 +126,16 @@ export class FacebookPublicationController {
 export class TikTokPublicationController {
   constructor(private readonly publicationService: PublicationService) {}
 
-  /**
-   * Get all TikTok publications
-   * GET /tiktok/publications
-   */
   @Get()
   async list(
-    @GetClientId() clientId: string, 
-    @Query('status') status?: PublicationStatus
+    @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: PublicationStatus,
   ) {
-    return this.publicationService.listPublications({
-      platform: Platform.TIKTOK,
-      status,
-      clientId,
-    });
+    return this.publicationService.listPublications(
+      { platform: Platform.TIKTOK, status, clientId },
+      pagination,
+    );
   }
 }
 
@@ -161,19 +143,15 @@ export class TikTokPublicationController {
 export class XPublicationController {
   constructor(private readonly publicationService: PublicationService) {}
 
-  /**
-   * Get all X (Twitter) publications
-   * GET /x/publications
-   */
   @Get()
   async list(
-    @GetClientId() clientId: string, 
-    @Query('status') status?: PublicationStatus
+    @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
+    @Query('status') status?: PublicationStatus,
   ) {
-    return this.publicationService.listPublications({
-      platform: Platform.X,
-      status,
-      clientId,
-    });
+    return this.publicationService.listPublications(
+      { platform: Platform.X, status, clientId },
+      pagination,
+    );
   }
 }

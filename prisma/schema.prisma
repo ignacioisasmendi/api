@@ -68,6 +68,8 @@ model SocialAccount {
   @@index([clientId])
   @@index([platform])
   @@index([disconnectedAt])
+  // Composite: getAllSocialAccounts WHERE userId AND clientId (most common filter)
+  @@index([userId, isActive])
 }
 
 model Content {
@@ -88,6 +90,8 @@ model Content {
   @@index([userId])
   @@index([clientId])
   @@index([calendarId])
+  // Composite: listContent WHERE clientId ORDER BY createdAt
+  @@index([clientId, createdAt])
 }
 
 
@@ -116,6 +120,8 @@ model Publication {
   @@index([status])
   @@index([socialAccountId])
   @@index([contentId])
+  // Composite: cron query WHERE status=SCHEDULED AND publishAt<=now ORDER BY publishAt
+  @@index([status, publishAt])
 }
 
 model Media {
@@ -224,6 +230,8 @@ model Calendar {
 
   @@index([userId])
   @@index([clientId])
+  // Composite: listCalendars WHERE clientId ORDER BY createdAt
+  @@index([clientId, createdAt])
 }
 
 model CalendarShareLink {
@@ -269,6 +277,8 @@ model Comment {
   @@index([publicationId])
   @@index([shareLinkId])
   @@index([commenterId])
+  // Composite: paginated comment list for public share (filter + sort)
+  @@index([calendarId, isResolved, createdAt])
 }
 
 model WaitlistEntry {

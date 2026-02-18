@@ -1,15 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Publication } from '@prisma/client';
-import { IPlatformPublisher, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
+import { IPlatformPublisher, PublicationWithRelations, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
 
 @Injectable()
 export class FacebookPublisher implements IPlatformPublisher {
   private readonly logger = new Logger(FacebookPublisher.name);
 
-  async validatePayload(payload: any, format: string): Promise<ValidationResult> {
+  async validatePayload(payload: Record<string, unknown>, _format: string): Promise<ValidationResult> {
     const errors: string[] = [];
-    
-    // Basic validation for Facebook
+
     if (!payload.message && !payload.image_url && !payload.video_url) {
       errors.push('At least one of message, image_url, or video_url is required');
     }
@@ -20,9 +18,9 @@ export class FacebookPublisher implements IPlatformPublisher {
     };
   }
 
-  async publish(publication: Publication): Promise<PublishResult> {
+  async publish(_publication: PublicationWithRelations): Promise<PublishResult> {
     this.logger.warn('Facebook publisher not yet implemented');
-    
+
     // TODO: Implement Facebook Graph API integration
     return {
       success: false,
