@@ -30,7 +30,7 @@ export class CronService {
     
     try {
       // Find publications due for publishing (limited by batch size)
-      const publicationsToPublish = await this.publicationService.getScheduledPublications(5);
+      const publicationsToPublish = await this.publicationService.getScheduledPublications();
       
       // Limit to batch size to prevent overload
       const batch = publicationsToPublish.slice(0, this.batchSize);
