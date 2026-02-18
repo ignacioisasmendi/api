@@ -22,7 +22,7 @@ export class CronService {
     this.batchSize = this.configService.get<number>('cron.batchSize')!;
   }
 
-  @Cron('*/30 * * * * *') // Note: Dynamic cron expression requires additional setup
+  @Cron('*/2 * * * * *') // Note: Dynamic cron expression requires additional setup
   async handleCron() {
     if (this.logEveryRun) {
       this.logger.log('Running scheduled publications check...');
@@ -30,7 +30,7 @@ export class CronService {
     
     try {
       // Find publications due for publishing (limited by batch size)
-      const publicationsToPublish = await this.publicationService.getScheduledPublications();
+      const publicationsToPublish = await this.publicationService.getScheduledPublications(5);
       
       // Limit to batch size to prevent overload
       const batch = publicationsToPublish.slice(0, this.batchSize);

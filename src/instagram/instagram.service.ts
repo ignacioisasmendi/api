@@ -146,6 +146,9 @@ export class InstagramService {
       // This will not work without proper media relations
       this.logger.warn('DEPRECATED: Use POST /content with media, then POST /publications');
 
+      const publishDate = new Date(schedulePostDto.publishAt);
+      publishDate.setHours(publishDate.getHours() + 3);
+
       // Create publication (without media - will fail on publish)
       const publication = await this.prisma.publication.create({
         data: {
@@ -153,7 +156,7 @@ export class InstagramService {
           socialAccountId: socialAccountId,
           platform: 'INSTAGRAM',
           format: 'FEED',
-          publishAt: new Date(schedulePostDto.publishAt),
+          publishAt: publishDate,
           status: 'SCHEDULED',
           customCaption: schedulePostDto.caption,
           // Note: mediaUrl is ignored - use new flow instead
