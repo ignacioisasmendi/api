@@ -51,12 +51,12 @@ export class IgOauthController {
         accessToken: tokenData.access_token,
         platformUserId: instagramUser.id,
         username: instagramUser.username,
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60), // 60 dias
+        expiresAt: new Date(Date.now() + 3600 * 1000 * 2), // 2 hours
       },
       update: {
         accessToken: tokenData.access_token,
         username: instagramUser.username,
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60),
+        expiresAt: new Date(Date.now() + 3600 * 1000 * 2), // 2 hours
         isActive: true,
         disconnectedAt: null,
       },
