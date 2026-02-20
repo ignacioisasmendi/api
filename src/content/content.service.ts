@@ -19,6 +19,9 @@ export class ContentService {
   ) {}
 
   async createContent(dto: CreateContentDto, userId: string, clientId: string): Promise<ContentWithMedia> {
+
+    const publicUrl = 'https://pub-d773025cd8974c48920973fa89738174.r2.dev';
+
     const content = await this.prisma.content.create({
       data: {
         userId,
@@ -26,7 +29,7 @@ export class ContentService {
         caption: dto.caption,
         media: {
           create: dto.media.map((m, index) => ({
-            url: m.url,
+            url: `${publicUrl}/${m.key}`,
             key: m.key,
             type: m.type,
             mimeType: m.mimeType,
@@ -41,12 +44,11 @@ export class ContentService {
       },
       include: {
         media: { orderBy: { order: 'asc' } },
-        publications: true,
       },
     });
 
     this.logger.log(`Created content ${content.id} with ${dto.media.length} media files`);
-    return content;
+    return { ...content, publications: [] };
   }
 
   async getContent(id: string, clientId: string): Promise<ContentWithMedia> {
