@@ -19,39 +19,34 @@ export class ContentService {
   ) {}
 
   async createContent(dto: CreateContentDto, userId: string, clientId: string): Promise<ContentWithMedia> {
-    try {
-      const content = await this.prisma.content.create({
-        data: {
-          userId,
-          clientId,
-          caption: dto.caption,
-          media: {
-            create: dto.media.map((m, index) => ({
-              url: m.url, // Use each media item's own URL from the DTO
-              key: m.key,
-              type: m.type,
-              mimeType: m.mimeType,
-              size: m.size,
-              width: m.width,
-              height: m.height,
-              duration: m.duration,
-              thumbnail: m.thumbnail,
-              order: m.order !== undefined ? m.order : index,
-            })),
-          },
+    const content = await this.prisma.content.create({
+      data: {
+        userId,
+        clientId,
+        caption: dto.caption,
+        media: {
+          create: dto.media.map((m, index) => ({
+            url: m.url,
+            key: m.key,
+            type: m.type,
+            mimeType: m.mimeType,
+            size: m.size,
+            width: m.width,
+            height: m.height,
+            duration: m.duration,
+            thumbnail: m.thumbnail,
+            order: m.order !== undefined ? m.order : index,
+          })),
         },
-        include: {
-          media: { orderBy: { order: 'asc' } },
-          publications: true,
-        },
-      });
+      },
+      include: {
+        media: { orderBy: { order: 'asc' } },
+        publications: true,
+      },
+    });
 
-      this.logger.log(`Created content ${content.id} with ${dto.media.length} media files`);
-      return content;
-    } catch (error) {
-      this.logger.error('Error creating content', error);
-      throw error;
-    }
+    this.logger.log(`Created content ${content.id} with ${dto.media.length} media files`);
+    return content;
   }
 
   async getContent(id: string, clientId: string): Promise<ContentWithMedia> {

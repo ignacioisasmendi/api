@@ -24,20 +24,21 @@ export class LoggingInterceptor implements NestInterceptor {
       tap({
         next: () => {
           const statusCode = response.statusCode;
-          const responseTime = Date.now() - startTime;
+          const ms = Date.now() - startTime;
           const userEmail = (this.cls.get('user') as any)?.email;
 
-          const logData = { method, url: originalUrl, statusCode, responseTime, userEmail };
+          // Human-readable message with structured fields for JSON mode
+          const msg = `${method} ${originalUrl} ${statusCode} ${ms}ms${userEmail ? ` — ${userEmail}` : ''}`;
 
           if (statusCode >= 400) {
-            this.logger.warn(logData, 'http response');
+            this.logger.warn({ method, url: originalUrl, statusCode, ms, userEmail }, msg);
           } else {
-            this.logger.info(logData, 'http response');
+            this.logger.info({ method, url: originalUrl, statusCode, ms, userEmail }, msg);
           }
         },
         error: (error: any) => {
           const statusCode = error?.status || error?.response?.status || 500;
-          const responseTime = Date.now() - startTime;
+          const ms = Date.now() - startTime;
           const userEmail = (this.cls.get('user') as any)?.email;
 
           this.logger.error(
@@ -45,11 +46,11 @@ export class LoggingInterceptor implements NestInterceptor {
               method,
               url: originalUrl,
               statusCode,
-              responseTime,
+              ms,
               userEmail,
               error: this.extractErrorMessage(error),
             },
-            'http error',
+            `${method} ${originalUrl} ${statusCode} ${ms}ms`,
           );
         },
       }),

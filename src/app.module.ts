@@ -32,7 +32,17 @@ import { LoggerModule } from 'nestjs-pino';
       pinoHttp: {
         transport:
           process.env.NODE_ENV !== 'production'
-            ? { target: 'pino-pretty', options: { colorize: true, singleLine: true } }
+            ? {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  translateTime: 'HH:MM:ss.l',
+                  ignore: 'pid,hostname,req,res',
+                  singleLine: false,
+                  messageFormat: '{if context}[{context}] {end}{msg}',
+                  errorLikeObjectKeys: ['err', 'error'],
+                },
+              }
             : undefined,
         level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
         autoLogging: false,

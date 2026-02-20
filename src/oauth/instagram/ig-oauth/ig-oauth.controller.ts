@@ -35,17 +35,31 @@ export class IgOauthController {
     // 3. Obtener información del usuario de Instagram
     const instagramUser = await this.igOauthService.getUserInfo(tokenData.access_token);
 
-    // 4. Guardar el access token en tu DB asociado al usuario y client actual
-    await this.prismaService.socialAccount.create({
-      data: {
+    // 4. Crear o reactivar la cuenta social asociada al usuario y client actual
+    await this.prismaService.socialAccount.upsert({
+      where: {
+        clientId_platform_platformUserId: {
+          clientId,
+          platform: 'INSTAGRAM',
+          platformUserId: instagramUser.id,
+        },
+      },
+      create: {
         userId: user.id,
         clientId,
         platform: 'INSTAGRAM',
         accessToken: tokenData.access_token,
         platformUserId: instagramUser.id,
         username: instagramUser.username,
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60) // 60 dias
-      }
+        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60), // 60 dias
+      },
+      update: {
+        accessToken: tokenData.access_token,
+        username: instagramUser.username,
+        expiresAt: new Date(Date.now() + 3600 * 1000 * 24 * 60),
+        isActive: true,
+        disconnectedAt: null,
+      },
     });
 
     return { success: true };

@@ -178,20 +178,27 @@ export class TiktokPostService {
   ): Promise<void> {
     this.logger.log(`Uploading video in a single request (${fileSize} bytes)`);
 
-    const stream = fs.createReadStream(filePath);
+    try {
+      const stream = fs.createReadStream(filePath);
 
-    await firstValueFrom(
-      this.httpService.put(uploadUrl, stream, {
-        headers: {
-          'Content-Type': 'video/mp4',
-          'Content-Length': fileSize.toString(),
-          'Content-Range': `bytes 0-${fileSize - 1}/${fileSize}`,
-        },
-        // Axios needs maxContentLength / maxBodyLength for large uploads
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-      }),
-    );
+      await firstValueFrom(
+        this.httpService.put(uploadUrl, stream, {
+          headers: {
+            'Content-Type': 'video/mp4',
+            'Content-Length': fileSize.toString(),
+            'Content-Range': `bytes 0-${fileSize - 1}/${fileSize}`,
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        { err: error, fileSize },
+        `TikTok single-chunk upload failed`,
+      );
+      throw new Error(`TikTok video upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -221,19 +228,29 @@ export class TiktokPostService {
         `Uploading chunk ${chunkIndex + 1}/${totalChunks} — bytes ${start}-${end}/${fileSize}`,
       );
 
-      const stream = fs.createReadStream(filePath, { start, end });
+      try {
+        const stream = fs.createReadStream(filePath, { start, end });
 
-      await firstValueFrom(
-        this.httpService.put(uploadUrl, stream, {
-          headers: {
-            'Content-Type': 'video/mp4',
-            'Content-Length': currentChunkSize.toString(),
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-          },
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-        }),
-      );
+        await firstValueFrom(
+          this.httpService.put(uploadUrl, stream, {
+            headers: {
+              'Content-Type': 'video/mp4',
+              'Content-Length': currentChunkSize.toString(),
+              'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+          }),
+        );
+      } catch (error) {
+        this.logger.error(
+          { err: error, chunkIndex: chunkIndex + 1, totalChunks, start, end, fileSize },
+          `TikTok chunk upload failed at chunk ${chunkIndex + 1}/${totalChunks}`,
+        );
+        throw new Error(
+          `TikTok video upload failed at chunk ${chunkIndex + 1}/${totalChunks}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
     }
   }
 

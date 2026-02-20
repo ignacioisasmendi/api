@@ -24,9 +24,16 @@ export class TkOauthController {
     // 2. Get TikTok user info
     const tiktokUser = await this.tkOauthService.getUserInfo(tokenData.access_token);
 
-    // 3. Save the social account in DB associated with the current user and client
-    await this.prismaService.socialAccount.create({
-      data: {
+    // 3. Crear o reactivar la cuenta social asociada al usuario y client actual
+    await this.prismaService.socialAccount.upsert({
+      where: {
+        clientId_platform_platformUserId: {
+          clientId,
+          platform: 'TIKTOK',
+          platformUserId: tokenData.open_id,
+        },
+      },
+      create: {
         userId: user.id,
         clientId,
         platform: 'TIKTOK',
@@ -34,7 +41,15 @@ export class TkOauthController {
         refreshToken: tokenData.refresh_token,
         platformUserId: tokenData.open_id,
         username: tiktokUser.display_name,
-        expiresAt: new Date(Date.now() + tokenData.expires_in * 1000), // 24 hours
+        expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+      },
+      update: {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        username: tiktokUser.display_name,
+        expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        isActive: true,
+        disconnectedAt: null,
       },
     });
 

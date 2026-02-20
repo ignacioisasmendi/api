@@ -1,5 +1,5 @@
 // src/shared/storage/storage.service.ts
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -35,41 +35,56 @@ export class StorageService {
     contentType: string,
     expiresIn: number = 3600,
   ): Promise<string> {
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      ContentType: contentType,
-    });
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+      });
 
-    return await getSignedUrl(this.r2Client, command, { expiresIn });
+      return await getSignedUrl(this.r2Client, command, { expiresIn });
+    } catch (error) {
+      this.logger.error({ err: error, key, contentType }, `Failed to generate upload URL for ${key}`);
+      throw new InternalServerErrorException('Failed to generate upload URL');
+    }
   }
 
   /**
    * Upload file directly from server (use sparingly - prefer presigned URLs)
    */
   async uploadFile(key: string, buffer: Buffer, contentType: string): Promise<string> {
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    });
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      });
 
-    await this.r2Client.send(command);
-    return this.getPublicUrl(key);
+      await this.r2Client.send(command);
+      return this.getPublicUrl(key);
+    } catch (error) {
+      this.logger.error({ err: error, key, contentType, size: buffer.length }, `Failed to upload file ${key}`);
+      throw new InternalServerErrorException('Failed to upload file');
+    }
   }
 
   /**
    * Delete file from R2
    */
   async deleteFile(key: string): Promise<void> {
-    const command = new DeleteObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-    });
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
 
-    await this.r2Client.send(command);
-    this.logger.log(`Deleted file: ${key}`);
+      await this.r2Client.send(command);
+      this.logger.log(`Deleted file: ${key}`);
+    } catch (error) {
+      this.logger.error({ err: error, key }, `Failed to delete file ${key}`);
+      throw new InternalServerErrorException('Failed to delete file');
+    }
   }
 
   /**

@@ -30,7 +30,7 @@ export class CronService {
     
     try {
       // Find publications due for publishing (limited by batch size)
-      const publicationsToPublish = await this.publicationService.getScheduledPublications();
+      const publicationsToPublish = await this.publicationService.getScheduledPublications(5);
       
       // Limit to batch size to prevent overload
       const batch = publicationsToPublish.slice(0, this.batchSize);
@@ -90,21 +90,28 @@ export class CronService {
             );
           }
         } catch (error) {
-          // Log error and update publication status to ERROR
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.logger.error(
-            `Failed to publish publication ${publication.id}:`,
-            error.message,
+            { err: error, publicationId: publication.id, platform: publication.socialAccount.platform },
+            `Failed to publish publication ${publication.id}: ${errorMessage}`,
           );
-          
-          await this.publicationService.updatePublicationStatus(
-            publication.id,
-            PublicationStatus.ERROR,
-            error.message || 'Unknown error occurred',
-          );
+
+          try {
+            await this.publicationService.updatePublicationStatus(
+              publication.id,
+              PublicationStatus.ERROR,
+              errorMessage,
+            );
+          } catch (dbError) {
+            this.logger.error(
+              { err: dbError, publicationId: publication.id },
+              `Failed to update publication status to ERROR after publish failure`,
+            );
+          }
         }
       }
     } catch (error) {
-      this.logger.error('Error in cron job:', error);
+      this.logger.error({ err: error }, 'Cron job failed to fetch/process publications batch');
     }
   }
 }

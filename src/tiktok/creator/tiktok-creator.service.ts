@@ -39,33 +39,41 @@ export class TiktokCreatorService {
 
     this.logger.log('Querying TikTok creator info');
 
-    const { data: response } = await firstValueFrom(
-      this.httpService.post<CreatorInfoResponse>(
-        url,
-        {}, // empty body — auth is via Bearer header
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json; charset=UTF-8',
+    try {
+      const { data: response } = await firstValueFrom(
+        this.httpService.post<CreatorInfoResponse>(
+          url,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
           },
-        },
-      ),
-    );
+        ),
+      );
 
-    // TikTok returns error info even on 200 – check the error code.
-    if (response.error.code !== 'ok') {
-      this.logger.error(
-        `TikTok creator info query failed: ${response.error.code} – ${response.error.message}`,
+      if (response.error.code !== 'ok') {
+        this.logger.error(
+          { tiktokError: response.error },
+          `TikTok creator info query failed: ${response.error.code} – ${response.error.message}`,
+        );
+        throw new Error(
+          `TikTok API error: ${response.error.code} – ${response.error.message}`,
+        );
+      }
+
+      this.logger.log(
+        `Creator supports privacy levels: ${response.data.privacy_level_options.join(', ')}`,
       );
-      throw new Error(
-        `TikTok API error: ${response.error.code} – ${response.error.message}`,
-      );
+
+      return response.data;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('TikTok API error')) {
+        throw error;
+      }
+      this.logger.error({ err: error }, 'Failed to query TikTok creator info');
+      throw new Error(`Failed to query TikTok creator info: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    this.logger.log(
-      `Creator supports privacy levels: ${response.data.privacy_level_options.join(', ')}`,
-    );
-
-    return response.data;
   }
 }

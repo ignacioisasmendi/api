@@ -176,15 +176,22 @@ export class UserService {
       throw new NotFoundException('Social account not found');
     }
 
-    return this.prisma.socialAccount.update({
-      where: { id: socialAccountId },
-      data: {
-        disconnectedAt: new Date(),
-        isActive: false,
-        accessToken: null,
-        refreshToken: null,
-      },
-    });
+    const [, updatedAccount] = await this.prisma.$transaction([
+      this.prisma.publication.deleteMany({
+        where: { socialAccountId, status: 'SCHEDULED' },
+      }),
+      this.prisma.socialAccount.update({
+        where: { id: socialAccountId },
+        data: {
+          disconnectedAt: new Date(),
+          isActive: false,
+          accessToken: null,
+          refreshToken: null,
+        },
+      }),
+    ]);
+
+    return updatedAccount;
   }
 
   /**

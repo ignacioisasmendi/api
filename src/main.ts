@@ -13,7 +13,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // API versioning prefix — all routes become /v1/*
-  app.setGlobalPrefix('v1');
+  //app.setGlobalPrefix('v1');
 
   const configService = app.get(ConfigService);
   app.enableCors({

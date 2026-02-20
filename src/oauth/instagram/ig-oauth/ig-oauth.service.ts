@@ -49,9 +49,27 @@ export class IgOauthService {
   }
 
   async getUserInfo(accessToken: string) {
-    const response = await fetch(
-      `https://graph.instagram.com/me?fields=id,username&access_token=${accessToken}`
-    );
-    return await response.json();
+    try {
+      const response = await fetch(
+        `https://graph.instagram.com/me?fields=id,username&access_token=${accessToken}`,
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(
+          { status: response.status, body: errorBody },
+          `Instagram getUserInfo failed: HTTP ${response.status}`,
+        );
+        throw new Error(`Instagram getUserInfo failed: HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Instagram getUserInfo')) {
+        throw error;
+      }
+      this.logger.error({ err: error }, 'Failed to fetch Instagram user info');
+      throw new Error(`Failed to fetch Instagram user info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

@@ -50,11 +50,15 @@ export class InstagramPublisher implements IPlatformPublisher {
           };
       }
     } catch (error) {
-      this.logger.error(`Failed to publish to Instagram: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        { err: error, publicationId: publication.id },
+        `Failed to publish to Instagram: ${errorMessage}`,
+      );
       return {
         success: false,
         message: 'Failed to publish to Instagram',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -69,15 +73,21 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     const caption = publication.customCaption || publication.content.caption || '';
 
-    const mediaId = await this.createMediaContainer(
-      media.url, caption, socialAccount.platformUserId!, socialAccount.accessToken!,
+    const data = await this.callInstagramApi(
+      `${this.apiUrl}/${socialAccount.platformUserId}/media`,
+      new URLSearchParams({
+        image_url: media.url,
+        caption,
+        access_token: socialAccount.accessToken!,
+      }),
+      'createMediaContainer',
     );
 
-    this.logger.log(`Media container created with ID: ${mediaId}`);
+    this.logger.log(`Media container created with ID: ${data.id}`);
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      mediaId, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
     );
 
     return {
@@ -98,20 +108,29 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     const link = (publication.platformConfig as Record<string, unknown> | null)?.link as string | undefined;
 
-    const mediaId = await this.createStoryContainer(
-      media.url, socialAccount.platformUserId!, socialAccount.accessToken!, link,
+    const params = new URLSearchParams({
+      image_url: media.url,
+      media_type: 'STORIES',
+      access_token: socialAccount.accessToken!,
+    });
+    if (link) params.append('link', link);
+
+    const data = await this.callInstagramApi(
+      `${this.apiUrl}/${socialAccount.platformUserId}/media`,
+      params,
+      'createStoryContainer',
     );
 
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      mediaId, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
     );
 
     return {
       success: true,
       platformId: publishedMediaId,
-      link: undefined, // Stories don't have permanent URLs
+      link: undefined,
       message: 'Story published successfully to Instagram',
     };
   }
@@ -126,14 +145,24 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     const caption = publication.customCaption || publication.content.caption || '';
 
-    const mediaId = await this.createReelContainer(
-      media.url, caption, socialAccount.platformUserId!, socialAccount.accessToken!, media.thumbnail ?? undefined,
+    const params = new URLSearchParams({
+      video_url: media.url,
+      caption,
+      media_type: 'REELS',
+      access_token: socialAccount.accessToken!,
+    });
+    if (media.thumbnail) params.append('cover_url', media.thumbnail);
+
+    const data = await this.callInstagramApi(
+      `${this.apiUrl}/${socialAccount.platformUserId}/media`,
+      params,
+      'createReelContainer',
     );
 
     await this.delay(this.videoProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      mediaId, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
     );
 
     return {
@@ -155,26 +184,44 @@ export class InstagramPublisher implements IPlatformPublisher {
     const caption = publication.customCaption || publication.content.caption || '';
 
     const mediaIds = await Promise.all(
-      mediaItems.map(item =>
-        this.createCarouselItemContainer(
-          item.media.url,
-          item.media.type === 'VIDEO',
-          socialAccount.platformUserId!,
-          socialAccount.accessToken!,
-        ),
-      ),
+      mediaItems.map((item, index) => {
+        const params = new URLSearchParams({
+          is_carousel_item: 'true',
+          access_token: socialAccount.accessToken!,
+        });
+        if (item.media.type === 'VIDEO') {
+          params.append('video_url', item.media.url);
+          params.append('media_type', 'VIDEO');
+        } else {
+          params.append('image_url', item.media.url);
+          params.append('media_type', 'IMAGE');
+        }
+
+        return this.callInstagramApi(
+          `${this.apiUrl}/${socialAccount.platformUserId}/media`,
+          params,
+          `createCarouselItem[${index}]`,
+        ).then(data => data.id as string);
+      }),
     );
 
     await this.delay(this.mediaProcessingWaitTime);
 
-    const carouselId = await this.createCarouselContainer(
-      mediaIds, caption, socialAccount.platformUserId!, socialAccount.accessToken!,
+    const carouselData = await this.callInstagramApi(
+      `${this.apiUrl}/${socialAccount.platformUserId}/media`,
+      new URLSearchParams({
+        media_type: 'CAROUSEL',
+        caption,
+        children: mediaIds.join(','),
+        access_token: socialAccount.accessToken!,
+      }),
+      'createCarouselContainer',
     );
 
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      carouselId, socialAccount.platformUserId!, socialAccount.accessToken!,
+      carouselData.id, socialAccount.platformUserId!, socialAccount.accessToken!,
     );
 
     return {
@@ -185,132 +232,65 @@ export class InstagramPublisher implements IPlatformPublisher {
     };
   }
 
-  private async createMediaContainer(
-    imageUrl: string, caption: string, platformUserId: string, accessToken: string,
-  ): Promise<string> {
-    this.logger.log('creating media container');
-    try {
-      const url = `${this.apiUrl}/${platformUserId}/media`;
-      const params = new URLSearchParams();
-      params.append('image_url', imageUrl);
-      params.append('caption', caption);
-      params.append('access_token', accessToken);
-
-      const response = await axios.post(url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      });
-
-      return response.data.id;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        this.logger.error('Failed to create media container', {
-          status: error.response?.status,
-          data: error.response?.data,
-        });
-      } else {
-        this.logger.error(`Failed to create media container: ${error.message}`, error.stack);
-      }
-      throw error;
-    }
-  }
-
-  private async createStoryContainer(
-    imageUrl: string, platformUserId: string, accessToken: string, link?: string,
-  ): Promise<string> {
-    const url = `${this.apiUrl}/${platformUserId}/media`;
-    const params = new URLSearchParams();
-    params.append('image_url', imageUrl);
-    params.append('media_type', 'STORIES');
-    if (link) params.append('link', link);
-    params.append('access_token', accessToken);
-
-    const response = await axios.post(url, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-
-    return response.data.id;
-  }
-
-  private async createReelContainer(
-    videoUrl: string, caption: string, platformUserId: string, accessToken: string, coverUrl?: string,
-  ): Promise<string> {
-    const url = `${this.apiUrl}/${platformUserId}/media`;
-    const params = new URLSearchParams();
-    params.append('video_url', videoUrl);
-    params.append('caption', caption);
-    params.append('media_type', 'REELS');
-    if (coverUrl) params.append('cover_url', coverUrl);
-    params.append('access_token', accessToken);
-
-    const response = await axios.post(url, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-
-    return response.data.id;
-  }
-
-  private async createCarouselItemContainer(
-    mediaUrl: string, isVideo: boolean, platformUserId: string, accessToken: string,
-  ): Promise<string> {
-    const url = `${this.apiUrl}/${platformUserId}/media`;
-    const params = new URLSearchParams();
-    if (isVideo) {
-      params.append('video_url', mediaUrl);
-      params.append('media_type', 'VIDEO');
-    } else {
-      params.append('image_url', mediaUrl);
-      params.append('media_type', 'IMAGE');
-    }
-    params.append('is_carousel_item', 'true');
-    params.append('access_token', accessToken);
-
-    const response = await axios.post(url, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-
-    return response.data.id;
-  }
-
-  private async createCarouselContainer(
-    mediaIds: string[], caption: string, platformUserId: string, accessToken: string,
-  ): Promise<string> {
-    const url = `${this.apiUrl}/${platformUserId}/media`;
-    const params = new URLSearchParams();
-    params.append('media_type', 'CAROUSEL');
-    params.append('caption', caption);
-    params.append('children', mediaIds.join(','));
-    params.append('access_token', accessToken);
-
-    const response = await axios.post(url, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-
-    return response.data.id;
-  }
-
+  /**
+   * Publish a previously created media container.
+   */
   private async publishMedia(
     creationId: string, platformUserId: string, accessToken: string,
   ): Promise<string> {
     this.logger.log(`Publishing media to Instagram`);
-    try {
-      const url = `${this.apiUrl}/${platformUserId}/media_publish`;
-      const params = new URLSearchParams();
-      params.append('creation_id', creationId);
-      params.append('access_token', accessToken);
 
+    const data = await this.callInstagramApi(
+      `${this.apiUrl}/${platformUserId}/media_publish`,
+      new URLSearchParams({
+        creation_id: creationId,
+        access_token: accessToken,
+      }),
+      'publishMedia',
+    );
+
+    return data.id;
+  }
+
+  /**
+   * Centralized Instagram Graph API caller with structured error handling.
+   *
+   * The IG Graph API returns errors in shape: { error: { message, type, code, fbtrace_id } }
+   * This method extracts and logs all of those fields for full visibility.
+   */
+  private async callInstagramApi(
+    url: string,
+    params: URLSearchParams,
+    context: string,
+  ): Promise<any> {
+    try {
       const response = await axios.post(url, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-
-      return response.data.id;
+      return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        this.logger.error('Failed to publish media to Instagram', {
-          status: error.response?.status,
-          data: error.response?.data,
-        });
+        const igError = error.response?.data?.error;
+        const status = error.response?.status;
+        const message = igError?.message || error.message;
+        const code = igError?.code;
+        const type = igError?.type;
+        const fbtraceId = igError?.fbtrace_id;
+
+        this.logger.error(
+          { status, igErrorCode: code, igErrorType: type, igMessage: message, fbtraceId, context },
+          `Instagram API error during ${context}: ${status} — ${message}`,
+        );
+
+        throw new Error(
+          `Instagram ${context} failed: ${message} (HTTP ${status}, code: ${code || 'N/A'})`,
+        );
       }
-      this.logger.error(`Failed to publish media to Instagram: ${error.message}`, error.stack);
+
+      this.logger.error(
+        { err: error, context },
+        `Unexpected error during Instagram ${context}`,
+      );
       throw error;
     }
   }
