@@ -24,9 +24,9 @@ export class CronService {
 
   @Cron('*/2 * * * * *') // Note: Dynamic cron expression requires additional setup
   async handleCron() {
-    if (this.logEveryRun) {
+  /*   if (this.logEveryRun) {
       this.logger.log('Running scheduled publications check...');
-    }
+    } */
     
     try {
       // Find publications due for publishing (limited by batch size)
@@ -36,9 +36,9 @@ export class CronService {
       const batch = publicationsToPublish.slice(0, this.batchSize);
 
       if (batch.length === 0) {
-        if (this.logEveryRun) {
+        /* if (this.logEveryRun) {
           this.logger.log('No publications to publish at this time');
-        }
+        } */
         return;
       }
 
