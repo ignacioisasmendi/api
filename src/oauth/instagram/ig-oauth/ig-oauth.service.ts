@@ -48,6 +48,26 @@ export class IgOauthService {
     }
   }
 
+  async exchangeForLongLivedToken(shortLivedToken: string): Promise<{ access_token: string; expires_in: number }> {
+    try {
+      const { data } = await axios.get('https://graph.instagram.com/access_token', {
+        params: {
+          grant_type: 'ig_exchange_token',
+          client_secret: this.instagramAppSecret,
+          access_token: shortLivedToken,
+        },
+        timeout: 15_000,
+      });
+      return data;
+    } catch (error) {
+      this.logger.error('Instagram long-lived token exchange failed');
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Long-lived token exchange failed: ${error.response?.data?.error?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+
   async getUserInfo(accessToken: string) {
     try {
       const response = await fetch(
