@@ -28,14 +28,24 @@ export class IgOauthController {
     @GetUser() user: User,
     @GetClientId() clientId: string,
   ) {
-    // 1. Validar el state para prevenir CSRF
-    // 2. Intercambiar el código por un access token
+    // 1. Exchange the authorization code for a short-lived token
     const tokenData = await this.igOauthService.exchangeCodeForToken(body.code);
 
-    // 3. Obtener información del usuario de Instagram
-    const instagramUser = await this.igOauthService.getUserInfo(tokenData.access_token);
+    console.log('tokenData', tokenData);
+    
 
-    // 4. Crear o reactivar la cuenta social asociada al usuario y client actual
+    // 2. Exchange short-lived token for a long-lived token (~60 days)
+    const longLived = await this.igOauthService.exchangeForLongLivedToken(tokenData.access_token);
+
+
+    console.log('longLived', longLived);
+    // 3. Get Instagram user info using the long-lived token
+    const instagramUser = await this.igOauthService.getUserInfo(longLived.access_token);
+
+    // 4. Compute expiry from the API response (expires_in is in seconds)
+    const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+
+    // 5. Create or reactivate the social account
     await this.prismaService.socialAccount.upsert({
       where: {
         clientId_platform_platformUserId: {
@@ -48,15 +58,15 @@ export class IgOauthController {
         userId: user.id,
         clientId,
         platform: 'INSTAGRAM',
-        accessToken: tokenData.access_token,
+        accessToken: longLived.access_token,
         platformUserId: instagramUser.id,
         username: instagramUser.username,
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 2), // 2 hours
+        expiresAt,
       },
       update: {
-        accessToken: tokenData.access_token,
+        accessToken: longLived.access_token,
         username: instagramUser.username,
-        expiresAt: new Date(Date.now() + 3600 * 1000 * 2), // 2 hours
+        expiresAt,
         isActive: true,
         disconnectedAt: null,
       },
