@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateManagerCommentDto } from './dto/comment.dto';
 
@@ -110,11 +106,7 @@ export class CommentService {
   /**
    * Delete a comment permanently.
    */
-  async deleteComment(
-    calendarId: string,
-    commentId: string,
-    clientId: string,
-  ) {
+  async deleteComment(calendarId: string, commentId: string, clientId: string) {
     await this.verifyCalendarOwnership(calendarId, clientId);
 
     const comment = await this.prisma.comment.findFirst({
@@ -126,9 +118,7 @@ export class CommentService {
     }
 
     await this.prisma.comment.delete({ where: { id: commentId } });
-    this.logger.log(
-      `Comment deleted: ${commentId} on calendar ${calendarId}`,
-    );
+    this.logger.log(`Comment deleted: ${commentId} on calendar ${calendarId}`);
   }
 
   private async verifyCalendarOwnership(

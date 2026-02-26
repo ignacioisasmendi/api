@@ -17,21 +17,24 @@ export class CronService {
     private readonly publisherFactory: PublisherFactory,
     private readonly configService: ConfigService,
   ) {
-    this.cronSchedule = this.configService.get<string>('cron.publisherSchedule')!;
+    this.cronSchedule = this.configService.get<string>(
+      'cron.publisherSchedule',
+    )!;
     this.logEveryRun = this.configService.get<boolean>('cron.logEveryRun')!;
     this.batchSize = this.configService.get<number>('cron.batchSize')!;
   }
 
   @Cron('*/2 * * * * *') // Note: Dynamic cron expression requires additional setup
   async handleCron() {
-  /*   if (this.logEveryRun) {
+    /*   if (this.logEveryRun) {
       this.logger.log('Running scheduled publications check...');
     } */
-    
+
     try {
       // Find publications due for publishing (limited by batch size)
-      const publicationsToPublish = await this.publicationService.getScheduledPublications(5);
-      
+      const publicationsToPublish =
+        await this.publicationService.getScheduledPublications(5);
+
       // Limit to batch size to prevent overload
       const batch = publicationsToPublish.slice(0, this.batchSize);
 
@@ -42,7 +45,9 @@ export class CronService {
         return;
       }
 
-      this.logger.log(`Found ${batch.length} publication(s) to publish (batch size: ${this.batchSize})`);
+      this.logger.log(
+        `Found ${batch.length} publication(s) to publish (batch size: ${this.batchSize})`,
+      );
 
       // Process each publication
       for (const publication of batch) {
@@ -58,7 +63,9 @@ export class CronService {
           );
 
           // Get the appropriate publisher for the platform
-          const publisher = this.publisherFactory.getPublisher(publication.socialAccount.platform);
+          const publisher = this.publisherFactory.getPublisher(
+            publication.socialAccount.platform,
+          );
 
           // Publish using the platform-specific publisher
           const result = await publisher.publish(publication);
@@ -90,9 +97,14 @@ export class CronService {
             );
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
           this.logger.error(
-            { err: error, publicationId: publication.id, platform: publication.socialAccount.platform },
+            {
+              err: error,
+              publicationId: publication.id,
+              platform: publication.socialAccount.platform,
+            },
             `Failed to publish publication ${publication.id}: ${errorMessage}`,
           );
 
@@ -111,7 +123,10 @@ export class CronService {
         }
       }
     } catch (error) {
-      this.logger.error({ err: error }, 'Cron job failed to fetch/process publications batch');
+      this.logger.error(
+        { err: error },
+        'Cron job failed to fetch/process publications batch',
+      );
     }
   }
 }

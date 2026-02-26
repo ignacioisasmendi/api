@@ -1,4 +1,13 @@
-import { IsEnum, IsDateString, IsNotEmpty, IsObject, ValidateNested, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsEnum,
+  IsDateString,
+  IsNotEmpty,
+  IsObject,
+  ValidateNested,
+  IsOptional,
+  IsString,
+  IsArray,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Platform, ContentFormat, PublicationStatus } from '@prisma/client';
 
@@ -109,6 +118,15 @@ export class UpdatePublicationDto {
   mediaIds?: PublicationMediaDto[];
 }
 
+export class MoveKanbanDto {
+  @IsString()
+  @IsOptional()
+  columnId?: string | null;
+
+  @IsOptional()
+  kanbanOrder?: number;
+}
+
 export class PublicationResponseDto {
   id: string;
   contentId: string;
@@ -120,8 +138,8 @@ export class PublicationResponseDto {
   error?: string;
   customCaption?: string;
   platformConfig?: any;
-  platformId?: string;  // Platform's internal ID (e.g., Instagram media ID)
-  link?: string;        // Public URL to the published content
+  platformId?: string; // Platform's internal ID (e.g., Instagram media ID)
+  link?: string; // Public URL to the published content
   createdAt: Date;
   updatedAt: Date;
 }

@@ -29,7 +29,11 @@ export class CalendarController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@GetUser() user: User, @GetClientId() clientId: string, @Body() dto: CreateCalendarDto) {
+  async create(
+    @GetUser() user: User,
+    @GetClientId() clientId: string,
+    @Body() dto: CreateCalendarDto,
+  ) {
     return this.calendarService.createCalendar(dto, user.id, clientId);
   }
 

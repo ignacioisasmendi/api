@@ -4,7 +4,6 @@ import { Auth0Guard } from './auth0.guard';
 import { UserModule } from '../users/user.module';
 import { PassportModule } from '@nestjs/passport';
 
-
 @Global()
 @Module({
   imports: [

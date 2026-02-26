@@ -30,9 +30,7 @@ export class ShareLinkCronService {
       });
 
       if (result.count > 0) {
-        this.logger.log(
-          `Deactivated ${result.count} expired share link(s)`,
-        );
+        this.logger.log(`Deactivated ${result.count} expired share link(s)`);
       }
     } catch (error) {
       this.logger.error('Error deactivating expired share links:', error);

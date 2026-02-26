@@ -1,6 +1,11 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import axios, { AxiosError } from 'axios';
-import { CreatePostDto, CreateMediaResponse, PublishMediaResponse, SchedulePostDto } from './instagram.dto';
+import {
+  CreatePostDto,
+  CreateMediaResponse,
+  PublishMediaResponse,
+  SchedulePostDto,
+} from './instagram.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Publication } from '@prisma/client';
 
@@ -9,11 +14,14 @@ export class InstagramService {
   private readonly logger = new Logger(InstagramService.name);
   private readonly instagramApiUrl = 'https://graph.instagram.com/v24.0';
   private readonly instagramAccountId = '25664926903117298';
-  private readonly accessToken = 'IGAARSwE90qqdBZAFlxVjBUYnF6d1dwTnFPcEhxS3A0Y3JwRE94MWNnZA0dFcXRLUVZAtYWJBTVp5S3dKcFJDZAGVSSDdPc1ZAaaDl4MnR3ZA3g3ckhFYXN6ZAXZAQM054X000bzhJampxeUE0bF9LaGktai13RnlEUjc2UlJJSGhEUFV3ZAwZDZD';
+  private readonly accessToken =
+    'IGAARSwE90qqdBZAFlxVjBUYnF6d1dwTnFPcEhxS3A0Y3JwRE94MWNnZA0dFcXRLUVZAtYWJBTVp5S3dKcFJDZAGVSSDdPc1ZAaaDl4MnR3ZA3g3ckhFYXN6ZAXZAQM054X000bzhJampxeUE0bF9LaGktai13RnlEUjc2UlJJSGhEUFV3ZAwZDZD';
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async publishPost(createPostDto: CreatePostDto): Promise<{ success: boolean; mediaId: string; message: string }> {
+  async publishPost(
+    createPostDto: CreatePostDto,
+  ): Promise<{ success: boolean; mediaId: string; message: string }> {
     try {
       // Step 1: Create media container
       this.logger.log('Creating media container...');
@@ -27,7 +35,9 @@ export class InstagramService {
       // Step 2: Publish the media
       this.logger.log('Publishing media...');
       const publishedMediaId = await this.publishMedia(mediaId);
-      this.logger.log(`Media published successfully with ID: ${publishedMediaId}`);
+      this.logger.log(
+        `Media published successfully with ID: ${publishedMediaId}`,
+      );
 
       return {
         success: true,
@@ -36,7 +46,7 @@ export class InstagramService {
       };
     } catch (error) {
       this.logger.error('Error publishing post to Instagram', error);
-      
+
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         throw new HttpException(
@@ -60,9 +70,11 @@ export class InstagramService {
     }
   }
 
-  private async createMediaContainer(createPostDto: CreatePostDto): Promise<string> {
+  private async createMediaContainer(
+    createPostDto: CreatePostDto,
+  ): Promise<string> {
     const url = `${this.instagramApiUrl}/${this.instagramAccountId}/media`;
-    
+
     const params = new URLSearchParams();
     params.append('image_url', createPostDto.image_url);
     params.append('caption', createPostDto.caption);
@@ -84,7 +96,7 @@ export class InstagramService {
 
   private async publishMedia(creationId: string): Promise<string> {
     const url = `${this.instagramApiUrl}/${this.instagramAccountId}/media_publish`;
-    
+
     const params = new URLSearchParams();
     params.append('creation_id', creationId);
     params.append('access_token', this.accessToken);
@@ -104,10 +116,15 @@ export class InstagramService {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async schedulePost(schedulePostDto: SchedulePostDto, userId: string, clientId: string, socialAccountId: string): Promise<Publication> {
+  async schedulePost(
+    schedulePostDto: SchedulePostDto,
+    userId: string,
+    clientId: string,
+    socialAccountId: string,
+  ): Promise<Publication> {
     try {
       this.logger.log('Creating scheduled post...');
 
@@ -130,7 +147,7 @@ export class InstagramService {
           HttpStatus.BAD_REQUEST,
         );
       }
-      
+
       // DEPRECATED: This method should use the new Content + Media approach
       // For now, create a simple content with caption only
       // The frontend should use the new flow: upload to R2 -> create content -> create publication
@@ -144,13 +161,14 @@ export class InstagramService {
 
       // Note: This is a legacy approach - media should be uploaded first and linked
       // This will not work without proper media relations
-      this.logger.warn('DEPRECATED: Use POST /content with media, then POST /publications');
+      this.logger.warn(
+        'DEPRECATED: Use POST /content with media, then POST /publications',
+      );
 
       const publishDate = new Date(schedulePostDto.publishAt);
       publishDate.setHours(publishDate.getHours() + 3);
 
       console.log('publishDate', publishDate);
-      
 
       // Create publication (without media - will fail on publish)
       const publication = await this.prisma.publication.create({
@@ -166,7 +184,9 @@ export class InstagramService {
         },
       });
 
-      this.logger.log(`Scheduled publication created with ID: ${publication.id}`);
+      this.logger.log(
+        `Scheduled publication created with ID: ${publication.id}`,
+      );
       return publication;
     } catch (error) {
       this.logger.error('Error creating scheduled post', error);

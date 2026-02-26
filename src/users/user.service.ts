@@ -59,7 +59,9 @@ export class UserService {
       }
 
       // Usuario no existe - crear nuevo con un client por defecto
-      this.logger.log(`Creating new user for Auth0 ID: ${userData.auth0UserId}`);
+      this.logger.log(
+        `Creating new user for Auth0 ID: ${userData.auth0UserId}`,
+      );
       user = await this.prisma.user.create({
         data: {
           auth0UserId: userData.auth0UserId,
@@ -74,7 +76,9 @@ export class UserService {
         },
       });
 
-      this.logger.log(`New user created with ID: ${user.id} (with default client)`);
+      this.logger.log(
+        `New user created with ID: ${user.id} (with default client)`,
+      );
       return user;
     } catch (error) {
       this.logger.error('Error in findOrCreateUser', error);
@@ -213,11 +217,15 @@ export class UserService {
       },
       orderBy: { createdAt: 'desc' },
     });
-  
-    return accounts.map(account => ({
+
+    return accounts.map((account) => ({
       ...account,
-      isExpired: account.expiresAt ? new Date(account.expiresAt) < new Date() : false,
-      needsReauth: !account.isActive || (account.expiresAt && new Date(account.expiresAt) < new Date()),
+      isExpired: account.expiresAt
+        ? new Date(account.expiresAt) < new Date()
+        : false,
+      needsReauth:
+        !account.isActive ||
+        (account.expiresAt && new Date(account.expiresAt) < new Date()),
     }));
   }
 }

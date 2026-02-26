@@ -13,7 +13,7 @@ export class IgOauthController {
     private readonly igOauthService: IgOauthService,
     private readonly prismaService: PrismaService,
   ) {}
-/* 
+  /* 
   @Get('callback')
   async callbackAuth(@Query('code') code: string, @Res() res: Response) {
     const response = await this.igOauthService.exchangeCodeForToken(code);
@@ -32,15 +32,17 @@ export class IgOauthController {
     const tokenData = await this.igOauthService.exchangeCodeForToken(body.code);
 
     console.log('tokenData', tokenData);
-    
 
     // 2. Exchange short-lived token for a long-lived token (~60 days)
-    const longLived = await this.igOauthService.exchangeForLongLivedToken(tokenData.access_token);
-
+    const longLived = await this.igOauthService.exchangeForLongLivedToken(
+      tokenData.access_token,
+    );
 
     console.log('longLived', longLived);
     // 3. Get Instagram user info using the long-lived token
-    const instagramUser = await this.igOauthService.getUserInfo(longLived.access_token);
+    const instagramUser = await this.igOauthService.getUserInfo(
+      longLived.access_token,
+    );
 
     // 4. Compute expiry from the API response (expires_in is in seconds)
     const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);

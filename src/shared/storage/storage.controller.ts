@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { GenerateUploadUrlDto, UploadUrlResponseDto } from './dto/storage.dto';
 import { GetClientId } from '../../decorators/get-client-id.decorator';

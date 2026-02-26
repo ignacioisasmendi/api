@@ -45,9 +45,9 @@ export interface XFeedPayload {
 }
 
 // Union type for all payloads
-export type PlatformPayload = 
-  | InstagramFeedPayload 
-  | InstagramStoryPayload 
+export type PlatformPayload =
+  | InstagramFeedPayload
+  | InstagramStoryPayload
   | InstagramReelPayload
   | FacebookFeedPayload
   | FacebookStoryPayload

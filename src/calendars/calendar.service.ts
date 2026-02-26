@@ -58,7 +58,9 @@ export class CalendarService {
       },
     });
 
-    this.logger.log(`Calendar created: ${calendar.id} by user ${userId} for client ${clientId}`);
+    this.logger.log(
+      `Calendar created: ${calendar.id} by user ${userId} for client ${clientId}`,
+    );
     return calendar;
   }
 
@@ -157,9 +159,7 @@ export class CalendarService {
       data: { calendarId },
     });
 
-    this.logger.log(
-      `Content ${contentId} assigned to calendar ${calendarId}`,
-    );
+    this.logger.log(`Content ${contentId} assigned to calendar ${calendarId}`);
   }
 
   async unassignContent(
@@ -184,9 +184,7 @@ export class CalendarService {
       data: { calendarId: null },
     });
 
-    this.logger.log(
-      `Content ${contentId} removed from calendar ${calendarId}`,
-    );
+    this.logger.log(`Content ${contentId} removed from calendar ${calendarId}`);
   }
 
   private async verifyOwnership(

@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { ContentFormat } from '@prisma/client';
-import { IPlatformPublisher, PublicationWithRelations, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
+import {
+  IPlatformPublisher,
+  PublicationWithRelations,
+  ValidationResult,
+  PublishResult,
+} from './interfaces/platform-publisher.interface';
 
 @Injectable()
 export class InstagramPublisher implements IPlatformPublisher {
@@ -13,11 +18,18 @@ export class InstagramPublisher implements IPlatformPublisher {
 
   constructor(private configService: ConfigService) {
     this.apiUrl = this.configService.get<string>('instagram.apiUrl')!;
-    this.mediaProcessingWaitTime = this.configService.get<number>('instagram.mediaProcessingWaitTime')!;
-    this.videoProcessingWaitTime = this.configService.get<number>('instagram.videoProcessingWaitTime')!;
+    this.mediaProcessingWaitTime = this.configService.get<number>(
+      'instagram.mediaProcessingWaitTime',
+    )!;
+    this.videoProcessingWaitTime = this.configService.get<number>(
+      'instagram.videoProcessingWaitTime',
+    )!;
   }
 
-  async validatePayload(_payload: Record<string, unknown>, _format: string): Promise<ValidationResult> {
+  async validatePayload(
+    _payload: Record<string, unknown>,
+    _format: string,
+  ): Promise<ValidationResult> {
     return { isValid: true };
   }
 
@@ -50,7 +62,8 @@ export class InstagramPublisher implements IPlatformPublisher {
           };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
         { err: error, publicationId: publication.id },
         `Failed to publish to Instagram: ${errorMessage}`,
@@ -63,15 +76,22 @@ export class InstagramPublisher implements IPlatformPublisher {
     }
   }
 
-  private async publishFeed(publication: PublicationWithRelations): Promise<PublishResult> {
+  private async publishFeed(
+    publication: PublicationWithRelations,
+  ): Promise<PublishResult> {
     const socialAccount = publication.socialAccount;
     const media = publication.mediaUsage[0]?.media;
 
     if (!media) {
-      return { success: false, message: 'No media found', error: 'Feed post requires at least one image' };
+      return {
+        success: false,
+        message: 'No media found',
+        error: 'Feed post requires at least one image',
+      };
     }
 
-    const caption = publication.customCaption || publication.content.caption || '';
+    const caption =
+      publication.customCaption || publication.content.caption || '';
 
     const data = await this.callInstagramApi(
       `${this.apiUrl}/${socialAccount.platformUserId}/media`,
@@ -87,7 +107,9 @@ export class InstagramPublisher implements IPlatformPublisher {
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id,
+      socialAccount.platformUserId!,
+      socialAccount.accessToken!,
     );
 
     return {
@@ -98,15 +120,22 @@ export class InstagramPublisher implements IPlatformPublisher {
     };
   }
 
-  private async publishStory(publication: PublicationWithRelations): Promise<PublishResult> {
+  private async publishStory(
+    publication: PublicationWithRelations,
+  ): Promise<PublishResult> {
     const socialAccount = publication.socialAccount;
     const media = publication.mediaUsage[0]?.media;
 
     if (!media) {
-      return { success: false, message: 'No media found', error: 'Story requires at least one image or video' };
+      return {
+        success: false,
+        message: 'No media found',
+        error: 'Story requires at least one image or video',
+      };
     }
 
-    const link = (publication.platformConfig as Record<string, unknown> | null)?.link as string | undefined;
+    const link = (publication.platformConfig as Record<string, unknown> | null)
+      ?.link as string | undefined;
 
     const params = new URLSearchParams({
       image_url: media.url,
@@ -124,7 +153,9 @@ export class InstagramPublisher implements IPlatformPublisher {
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id,
+      socialAccount.platformUserId!,
+      socialAccount.accessToken!,
     );
 
     return {
@@ -135,15 +166,22 @@ export class InstagramPublisher implements IPlatformPublisher {
     };
   }
 
-  private async publishReel(publication: PublicationWithRelations): Promise<PublishResult> {
+  private async publishReel(
+    publication: PublicationWithRelations,
+  ): Promise<PublishResult> {
     const socialAccount = publication.socialAccount;
     const media = publication.mediaUsage[0]?.media;
 
     if (!media || media.type !== 'VIDEO') {
-      return { success: false, message: 'Invalid media', error: 'Reel requires a video file' };
+      return {
+        success: false,
+        message: 'Invalid media',
+        error: 'Reel requires a video file',
+      };
     }
 
-    const caption = publication.customCaption || publication.content.caption || '';
+    const caption =
+      publication.customCaption || publication.content.caption || '';
 
     const params = new URLSearchParams({
       video_url: media.url,
@@ -162,7 +200,9 @@ export class InstagramPublisher implements IPlatformPublisher {
     await this.delay(this.videoProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      data.id, socialAccount.platformUserId!, socialAccount.accessToken!,
+      data.id,
+      socialAccount.platformUserId!,
+      socialAccount.accessToken!,
     );
 
     return {
@@ -173,15 +213,22 @@ export class InstagramPublisher implements IPlatformPublisher {
     };
   }
 
-  private async publishCarousel(publication: PublicationWithRelations): Promise<PublishResult> {
+  private async publishCarousel(
+    publication: PublicationWithRelations,
+  ): Promise<PublishResult> {
     const socialAccount = publication.socialAccount;
     const mediaItems = publication.mediaUsage;
 
     if (!mediaItems || mediaItems.length < 2) {
-      return { success: false, message: 'Invalid media count', error: 'Carousel requires at least 2 media items' };
+      return {
+        success: false,
+        message: 'Invalid media count',
+        error: 'Carousel requires at least 2 media items',
+      };
     }
 
-    const caption = publication.customCaption || publication.content.caption || '';
+    const caption =
+      publication.customCaption || publication.content.caption || '';
 
     const mediaIds = await Promise.all(
       mediaItems.map((item, index) => {
@@ -201,7 +248,7 @@ export class InstagramPublisher implements IPlatformPublisher {
           `${this.apiUrl}/${socialAccount.platformUserId}/media`,
           params,
           `createCarouselItem[${index}]`,
-        ).then(data => data.id as string);
+        ).then((data) => data.id as string);
       }),
     );
 
@@ -221,7 +268,9 @@ export class InstagramPublisher implements IPlatformPublisher {
     await this.delay(this.mediaProcessingWaitTime);
 
     const publishedMediaId = await this.publishMedia(
-      carouselData.id, socialAccount.platformUserId!, socialAccount.accessToken!,
+      carouselData.id,
+      socialAccount.platformUserId!,
+      socialAccount.accessToken!,
     );
 
     return {
@@ -236,7 +285,9 @@ export class InstagramPublisher implements IPlatformPublisher {
    * Publish a previously created media container.
    */
   private async publishMedia(
-    creationId: string, platformUserId: string, accessToken: string,
+    creationId: string,
+    platformUserId: string,
+    accessToken: string,
   ): Promise<string> {
     this.logger.log(`Publishing media to Instagram`);
 
@@ -278,7 +329,14 @@ export class InstagramPublisher implements IPlatformPublisher {
         const fbtraceId = igError?.fbtrace_id;
 
         this.logger.error(
-          { status, igErrorCode: code, igErrorType: type, igMessage: message, fbtraceId, context },
+          {
+            status,
+            igErrorCode: code,
+            igErrorType: type,
+            igMessage: message,
+            fbtraceId,
+            context,
+          },
           `Instagram API error during ${context}: ${status} — ${message}`,
         );
 
@@ -296,6 +354,6 @@ export class InstagramPublisher implements IPlatformPublisher {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

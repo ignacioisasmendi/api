@@ -1,4 +1,11 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { TikTokPrivacyLevel } from '../tiktok.constants';
 
@@ -14,7 +21,9 @@ import { TikTokPrivacyLevel } from '../tiktok.constants';
 export class UploadPublishBodyDto {
   @IsString({ message: 'title must be a string' })
   @IsNotEmpty({ message: 'title is required' })
-  @MaxLength(150, { message: 'TikTok video title must be 150 characters or fewer' })
+  @MaxLength(150, {
+    message: 'TikTok video title must be 150 characters or fewer',
+  })
   title: string;
 
   @IsEnum(TikTokPrivacyLevel, {

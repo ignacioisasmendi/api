@@ -1,9 +1,14 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreatePublicationDto,
   BulkCreatePublicationDto,
-  UpdatePublicationDto
+  UpdatePublicationDto,
 } from './dto/publication.dto';
 import { PublicationStatus, Prisma, Platform } from '@prisma/client';
 import { PaginatedResponse, PaginationDto } from '../common/dto/pagination.dto';
@@ -32,6 +37,8 @@ const PUBLICATION_SELECT = {
   link: true,
   contentId: true,
   socialAccountId: true,
+  kanbanColumnId: true,
+  kanbanOrder: true,
   createdAt: true,
   updatedAt: true,
   content: {
@@ -85,7 +92,9 @@ export class PublicationService {
     ]);
 
     if (!content) {
-      throw new BadRequestException('Content not found or does not belong to this client');
+      throw new BadRequestException(
+        'Content not found or does not belong to this client',
+      );
     }
 
     if (!socialAccount) {
@@ -93,11 +102,13 @@ export class PublicationService {
     }
 
     // Verify all media IDs belong to this content
-    const mediaIds = dto.mediaIds.map(m => m.mediaId);
-    const validMedia = content.media.filter(m => mediaIds.includes(m.id));
+    const mediaIds = dto.mediaIds.map((m) => m.mediaId);
+    const validMedia = content.media.filter((m) => mediaIds.includes(m.id));
 
     if (validMedia.length !== mediaIds.length) {
-      throw new BadRequestException('Some media IDs do not belong to this content');
+      throw new BadRequestException(
+        'Some media IDs do not belong to this content',
+      );
     }
 
     const publication = await this.prisma.publication.create({
@@ -111,7 +122,7 @@ export class PublicationService {
         platformConfig: dto.platformConfig,
         status: PublicationStatus.SCHEDULED,
         mediaUsage: {
-          create: dto.mediaIds.map(m => ({
+          create: dto.mediaIds.map((m) => ({
             mediaId: m.mediaId,
             order: m.order ?? 0,
             cropData: m.cropData,
@@ -121,7 +132,9 @@ export class PublicationService {
       select: PUBLICATION_SELECT,
     });
 
-    this.logger.log(`Created publication ${publication.id} for ${socialAccount.platform}`);
+    this.logger.log(
+      `Created publication ${publication.id} for ${socialAccount.platform}`,
+    );
     return publication;
   }
 
@@ -183,7 +196,11 @@ export class PublicationService {
     };
   }
 
-  async updatePublication(id: string, clientId: string, dto: UpdatePublicationDto) {
+  async updatePublication(
+    id: string,
+    clientId: string,
+    dto: UpdatePublicationDto,
+  ) {
     const publication = await this.getPublication(id, clientId);
 
     // Don't allow updates to published or publishing posts
@@ -191,12 +208,16 @@ export class PublicationService {
       publication.status === PublicationStatus.PUBLISHED ||
       publication.status === PublicationStatus.PUBLISHING
     ) {
-      throw new BadRequestException('Cannot update publication that is already published or publishing');
+      throw new BadRequestException(
+        'Cannot update publication that is already published or publishing',
+      );
     }
 
     const updateData: Prisma.PublicationUpdateInput = {
       ...(dto.publishAt && { publishAt: new Date(dto.publishAt) }),
-      ...(dto.customCaption !== undefined && { customCaption: dto.customCaption }),
+      ...(dto.customCaption !== undefined && {
+        customCaption: dto.customCaption,
+      }),
       ...(dto.platformConfig && { platformConfig: dto.platformConfig }),
       ...(dto.status && { status: dto.status }),
     };
@@ -208,17 +229,21 @@ export class PublicationService {
         include: { media: true },
       });
 
-      const mediaIds = dto.mediaIds.map(m => m.mediaId);
-      const validMedia = content!.media.filter(m => mediaIds.includes(m.id));
+      const mediaIds = dto.mediaIds.map((m) => m.mediaId);
+      const validMedia = content!.media.filter((m) => mediaIds.includes(m.id));
 
       if (validMedia.length !== mediaIds.length) {
-        throw new BadRequestException('Some media IDs do not belong to this content');
+        throw new BadRequestException(
+          'Some media IDs do not belong to this content',
+        );
       }
 
       await this.prisma.$transaction([
-        this.prisma.publicationMedia.deleteMany({ where: { publicationId: id } }),
+        this.prisma.publicationMedia.deleteMany({
+          where: { publicationId: id },
+        }),
         this.prisma.publicationMedia.createMany({
-          data: dto.mediaIds.map(m => ({
+          data: dto.mediaIds.map((m) => ({
             publicationId: id,
             mediaId: m.mediaId,
             order: m.order ?? 0,
@@ -240,7 +265,9 @@ export class PublicationService {
 
     // Don't allow deletion of publishing posts
     if (publication.status === PublicationStatus.PUBLISHING) {
-      throw new BadRequestException('Cannot delete publication that is currently publishing');
+      throw new BadRequestException(
+        'Cannot delete publication that is currently publishing',
+      );
     }
 
     await this.prisma.publication.delete({ where: { id } });
@@ -251,7 +278,9 @@ export class PublicationService {
    * Used by the cron job — returns full relations including tokens needed for publishing.
    * The `take` param enforces the configured batch size to prevent DB overload.
    */
-  async getScheduledPublications(take: number): Promise<PublicationWithRelations[]> {
+  async getScheduledPublications(
+    take: number,
+  ): Promise<PublicationWithRelations[]> {
     return this.prisma.publication.findMany({
       where: {
         publishAt: { lte: new Date() },
@@ -260,6 +289,45 @@ export class PublicationService {
       include: PUBLICATION_FULL_INCLUDE,
       orderBy: { publishAt: 'asc' },
       take,
+    });
+  }
+
+  async moveToKanbanColumn(
+    id: string,
+    clientId: string,
+    dto: { columnId?: string | null; kanbanOrder?: number },
+  ) {
+    const publication = await this.prisma.publication.findFirst({
+      where: { id, content: { clientId } },
+      select: { id: true, content: { select: { calendarId: true } } },
+    });
+
+    if (!publication) {
+      throw new NotFoundException(`Publication ${id} not found`);
+    }
+
+    if (dto.columnId) {
+      const column = await this.prisma.kanbanColumn.findFirst({
+        where: {
+          id: dto.columnId,
+          calendarId: publication.content.calendarId!,
+        },
+      });
+
+      if (!column) {
+        throw new BadRequestException(
+          `Column ${dto.columnId} not found in this calendar`,
+        );
+      }
+    }
+
+    return this.prisma.publication.update({
+      where: { id },
+      data: {
+        kanbanColumnId: dto.columnId ?? null,
+        ...(dto.kanbanOrder !== undefined && { kanbanOrder: dto.kanbanOrder }),
+      },
+      select: PUBLICATION_SELECT,
     });
   }
 

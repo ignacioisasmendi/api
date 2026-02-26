@@ -111,15 +111,19 @@ model Publication {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  content       Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  mediaUsage    PublicationMedia[] // New relation!
-  comments      Comment[]
+  content        Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  socialAccount  SocialAccount      @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  mediaUsage     PublicationMedia[]
+  comments       Comment[]
+  kanbanColumnId String?
+  kanbanOrder    Int                @default(0)
+  kanbanColumn   KanbanColumn?      @relation(fields: [kanbanColumnId], references: [id], onDelete: SetNull)
 
   @@index([publishAt])
   @@index([status])
   @@index([socialAccountId])
   @@index([contentId])
+  @@index([kanbanColumnId])
   // Composite: cron query WHERE status=SCHEDULED AND publishAt<=now ORDER BY publishAt
   @@index([status, publishAt])
 }
@@ -222,16 +226,34 @@ model Calendar {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client     Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  contents   Content[]
-  shareLinks CalendarShareLink[]
-  comments   Comment[]
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client        Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contents      Content[]
+  shareLinks    CalendarShareLink[]
+  comments      Comment[]
+  kanbanColumns KanbanColumn[]
 
   @@index([userId])
   @@index([clientId])
   // Composite: listCalendars WHERE clientId ORDER BY createdAt
   @@index([clientId, createdAt])
+}
+
+model KanbanColumn {
+  id           String   @id @default(cuid())
+  calendarId   String
+  name         String
+  order        Int      @default(0)
+  mappedStatus String?
+  color        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  calendar     Calendar      @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  publications Publication[]
+
+  @@index([calendarId])
+  @@index([calendarId, order])
 }
 
 model CalendarShareLink {

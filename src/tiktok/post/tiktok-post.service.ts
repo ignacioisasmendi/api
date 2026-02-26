@@ -80,7 +80,7 @@ export class TiktokPostService {
     const body: DirectPostInitRequestBody = {
       post_info: {
         title: dto.title,
-        privacy_level: "SELF_ONLY",
+        privacy_level: 'SELF_ONLY',
         disable_comment: dto.disable_comment,
         disable_duet: dto.disable_duet,
         disable_stitch: dto.disable_stitch,
@@ -129,7 +129,9 @@ export class TiktokPostService {
       );
     }
 
-    this.logger.log(`Direct post initialized — publish_id: ${response.data.publish_id}`);
+    this.logger.log(
+      `Direct post initialized — publish_id: ${response.data.publish_id}`,
+    );
     return response.data;
   }
 
@@ -197,7 +199,9 @@ export class TiktokPostService {
         { err: error, fileSize },
         `TikTok single-chunk upload failed`,
       );
-      throw new Error(`TikTok video upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `TikTok video upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -244,7 +248,14 @@ export class TiktokPostService {
         );
       } catch (error) {
         this.logger.error(
-          { err: error, chunkIndex: chunkIndex + 1, totalChunks, start, end, fileSize },
+          {
+            err: error,
+            chunkIndex: chunkIndex + 1,
+            totalChunks,
+            start,
+            end,
+            fileSize,
+          },
           `TikTok chunk upload failed at chunk ${chunkIndex + 1}/${totalChunks}`,
         );
         throw new Error(
@@ -273,7 +284,9 @@ export class TiktokPostService {
     socialAccountId: string,
     refreshToken: string,
   ): Promise<string> {
-    this.logger.warn(`Refreshing TikTok access token for account ${socialAccountId}`);
+    this.logger.warn(
+      `Refreshing TikTok access token for account ${socialAccountId}`,
+    );
 
     const form = new URLSearchParams({
       client_key: this.clientKey,
@@ -370,8 +383,7 @@ export class TiktokPostService {
     }
 
     // TikTok-specific error code in the response body
-    const tiktokErrorCode =
-      error?.response?.data?.error?.code;
+    const tiktokErrorCode = error?.response?.data?.error?.code;
 
     if (tiktokErrorCode === TIKTOK_ERROR_CODES.ACCESS_TOKEN_INVALID) {
       return true;

@@ -17,6 +17,7 @@ import { TkOauthModule } from './oauth/tiktok/tk-oauth/tk-oauth.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { TiktokModule } from './tiktok/tiktok.module';
 import { CalendarModule } from './calendars/calendar.module';
+import { KanbanColumnModule } from './kanban-columns/kanban-column.module';
 import { ShareLinkModule } from './share-links/share-link.module';
 import { PublicShareModule } from './public-share/public-share.module';
 import { ClientModule } from './clients/client.module';
@@ -69,6 +70,7 @@ import { LoggerModule } from 'nestjs-pino';
     StorageModule,
     TiktokModule,
     CalendarModule,
+    KanbanColumnModule,
     ShareLinkModule,
     PublicShareModule,
     ClientModule,
@@ -76,13 +78,13 @@ import { LoggerModule } from 'nestjs-pino';
     ThrottlerModule.forRoot([
       {
         name: 'short',
-        ttl: 60000,   // 1 minute window
-        limit: 60,    // 60 requests per minute (default)
+        ttl: 60000, // 1 minute window
+        limit: 60, // 60 requests per minute (default)
       },
       {
         name: 'long',
-        ttl: 3600000,  // 1 hour window
-        limit: 1000,   // 1000 requests per hour
+        ttl: 3600000, // 1 hour window
+        limit: 1000, // 1000 requests per hour
       },
     ]),
   ],

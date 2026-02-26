@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export enum MediaTypeEnum {
   IMAGE = 'IMAGE',

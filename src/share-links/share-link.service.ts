@@ -116,9 +116,7 @@ export class ShareLinkService {
       },
     });
 
-    this.logger.log(
-      `ShareLink revoked: ${linkId}`,
-    );
+    this.logger.log(`ShareLink revoked: ${linkId}`);
   }
 
   /**
@@ -167,9 +165,7 @@ export class ShareLinkService {
       }),
     ]);
 
-    this.logger.log(
-      `ShareLink regenerated: old=${linkId} new=${newLink.id}`,
-    );
+    this.logger.log(`ShareLink regenerated: old=${linkId} new=${newLink.id}`);
 
     return { shareLink: newLink, rawToken };
   }

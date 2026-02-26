@@ -52,6 +52,19 @@ export class PublicShareService {
         user: {
           select: { name: true },
         },
+        kanbanColumns: {
+          select: {
+            id: true,
+            calendarId: true,
+            name: true,
+            order: true,
+            mappedStatus: true,
+            color: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: { order: 'asc' },
+        },
         contents: {
           select: {
             id: true,
@@ -79,6 +92,8 @@ export class PublicShareService {
                 status: true,
                 customCaption: true,
                 link: true,
+                kanbanColumnId: true,
+                kanbanOrder: true,
                 mediaUsage: {
                   select: {
                     id: true,
@@ -183,9 +198,7 @@ export class PublicShareService {
     const { link } = resolved;
 
     if (link!.permission !== SharePermission.VIEW_AND_COMMENT) {
-      throw new ForbiddenException(
-        'This link does not allow commenting',
-      );
+      throw new ForbiddenException('This link does not allow commenting');
     }
 
     // If publicationId is provided, verify it belongs to this calendar
@@ -198,9 +211,7 @@ export class PublicShareService {
       });
 
       if (!publication) {
-        throw new BadRequestException(
-          'Publication not found in this calendar',
-        );
+        throw new BadRequestException('Publication not found in this calendar');
       }
     }
 
@@ -303,10 +314,7 @@ export class PublicShareService {
   /**
    * Assert the resolved link is valid (not expired, not revoked).
    */
-  private assertValidLink(resolved: {
-    status: string;
-    link: any;
-  }): void {
+  private assertValidLink(resolved: { status: string; link: any }): void {
     switch (resolved.status) {
       case 'invalid':
         throw new NotFoundException(

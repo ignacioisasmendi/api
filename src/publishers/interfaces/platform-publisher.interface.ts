@@ -9,8 +9,8 @@ export interface ValidationResult {
 
 export interface PublishResult {
   success: boolean;
-  platformId?: string;  // Platform's internal ID (e.g., Instagram media ID)
-  link?: string;        // Public URL to the published content
+  platformId?: string; // Platform's internal ID (e.g., Instagram media ID)
+  link?: string; // Public URL to the published content
   message: string;
   error?: string;
 }
@@ -19,7 +19,10 @@ export interface IPlatformPublisher {
   /**
    * Validates the payload for the specific platform and format
    */
-  validatePayload(payload: Record<string, unknown>, format: string): Promise<ValidationResult>;
+  validatePayload(
+    payload: Record<string, unknown>,
+    format: string,
+  ): Promise<ValidationResult>;
 
   /**
    * Publishes content to the platform.

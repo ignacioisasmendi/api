@@ -69,11 +69,16 @@ export class TiktokCreatorService {
 
       return response.data;
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('TikTok API error')) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith('TikTok API error')
+      ) {
         throw error;
       }
       this.logger.error({ err: error }, 'Failed to query TikTok creator info');
-      throw new Error(`Failed to query TikTok creator info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to query TikTok creator info: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 }

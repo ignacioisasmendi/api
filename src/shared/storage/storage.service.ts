@@ -1,7 +1,15 @@
 // src/shared/storage/storage.service.ts
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 @Injectable()
@@ -20,7 +28,9 @@ export class StorageService {
       endpoint: `https://${this.configService.get('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID')!,
-        secretAccessKey: this.configService.get<string>('R2_SECRET_ACCESS_KEY')!,
+        secretAccessKey: this.configService.get<string>(
+          'R2_SECRET_ACCESS_KEY',
+        )!,
       },
     });
 
@@ -44,7 +54,10 @@ export class StorageService {
 
       return await getSignedUrl(this.r2Client, command, { expiresIn });
     } catch (error) {
-      this.logger.error({ err: error, key, contentType }, `Failed to generate upload URL for ${key}`);
+      this.logger.error(
+        { err: error, key, contentType },
+        `Failed to generate upload URL for ${key}`,
+      );
       throw new InternalServerErrorException('Failed to generate upload URL');
     }
   }
@@ -52,7 +65,11 @@ export class StorageService {
   /**
    * Upload file directly from server (use sparingly - prefer presigned URLs)
    */
-  async uploadFile(key: string, buffer: Buffer, contentType: string): Promise<string> {
+  async uploadFile(
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+  ): Promise<string> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -64,7 +81,10 @@ export class StorageService {
       await this.r2Client.send(command);
       return this.getPublicUrl(key);
     } catch (error) {
-      this.logger.error({ err: error, key, contentType, size: buffer.length }, `Failed to upload file ${key}`);
+      this.logger.error(
+        { err: error, key, contentType, size: buffer.length },
+        `Failed to upload file ${key}`,
+      );
       throw new InternalServerErrorException('Failed to upload file');
     }
   }

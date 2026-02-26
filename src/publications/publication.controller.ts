@@ -3,17 +3,19 @@ import {
   Post,
   Get,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
   Query,
   HttpCode,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { PublicationService } from './publication.service';
 import {
   CreatePublicationDto,
-  UpdatePublicationDto
+  UpdatePublicationDto,
+  MoveKanbanDto,
 } from './dto/publication.dto';
 import { PublicationStatus, Platform } from '@prisma/client';
 import { GetClientId } from 'src/decorators';
@@ -29,7 +31,10 @@ export class PublicationController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@GetClientId() clientId: string, @Body() dto: CreatePublicationDto) {
+  async create(
+    @GetClientId() clientId: string,
+    @Body() dto: CreatePublicationDto,
+  ) {
     return this.publicationService.createPublication(dto, clientId);
   }
 
@@ -82,6 +87,15 @@ export class PublicationController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@GetClientId() clientId: string, @Param('id') id: string) {
     await this.publicationService.deletePublication(id, clientId);
+  }
+
+  @Patch(':id/kanban')
+  async moveToColumn(
+    @GetClientId() clientId: string,
+    @Param('id') id: string,
+    @Body() dto: MoveKanbanDto,
+  ) {
+    return this.publicationService.moveToKanbanColumn(id, clientId, dto);
   }
 }
 

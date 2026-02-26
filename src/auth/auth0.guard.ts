@@ -27,7 +27,7 @@ export class Auth0Guard implements CanActivate {
     private readonly userService: UserService,
   ) {
     const auth0Domain = this.configService.get<string>('auth.auth0Domain');
-    
+
     if (!auth0Domain) {
       throw new Error('AUTH0_DOMAIN is not configured');
     }
@@ -61,7 +61,7 @@ export class Auth0Guard implements CanActivate {
 
     try {
       // Decodificar el token sin verificar para obtener el kid (key id)
-      const decoded = this.jwtService.decode(token, { complete: true }) as any;
+      const decoded = this.jwtService.decode(token, { complete: true });
 
       if (!decoded || !decoded.header || !decoded.header.kid) {
         throw new UnauthorizedException('Invalid token structure');

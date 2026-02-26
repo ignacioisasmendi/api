@@ -22,7 +22,9 @@ export class TkOauthController {
     const tokenData = await this.tkOauthService.exchangeCodeForToken(body.code);
 
     // 2. Get TikTok user info
-    const tiktokUser = await this.tkOauthService.getUserInfo(tokenData.access_token);
+    const tiktokUser = await this.tkOauthService.getUserInfo(
+      tokenData.access_token,
+    );
 
     // 3. Crear o reactivar la cuenta social asociada al usuario y client actual
     await this.prismaService.socialAccount.upsert({

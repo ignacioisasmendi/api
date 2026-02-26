@@ -10,7 +10,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ContentService } from './content.service';
-import { CreateContentDto, UpdateContentDto, AddMediaToContentDto } from './dto/content.dto';
+import {
+  CreateContentDto,
+  UpdateContentDto,
+  AddMediaToContentDto,
+} from './dto/content.dto';
 import { GetUser } from '../decorators/get-user.decorator';
 import { User } from '@prisma/client';
 import { GetClientId } from 'src/decorators';
@@ -25,7 +29,11 @@ export class ContentController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@GetUser() user: User, @GetClientId() clientId: string, @Body() dto: CreateContentDto) {
+  async create(
+    @GetUser() user: User,
+    @GetClientId() clientId: string,
+    @Body() dto: CreateContentDto,
+  ) {
     return this.contentService.createContent(dto, user.id, clientId);
   }
 
@@ -90,7 +98,10 @@ export class ContentController {
    */
   @Delete('media/:mediaId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteMedia(@GetClientId() clientId: string, @Param('mediaId') mediaId: string) {
+  async deleteMedia(
+    @GetClientId() clientId: string,
+    @Param('mediaId') mediaId: string,
+  ) {
     await this.contentService.deleteMedia(mediaId, clientId);
   }
 }

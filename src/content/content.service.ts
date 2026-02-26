@@ -1,7 +1,16 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateContentDto, UpdateContentDto, AddMediaToContentDto } from './dto/content.dto';
+import {
+  CreateContentDto,
+  UpdateContentDto,
+  AddMediaToContentDto,
+} from './dto/content.dto';
 import { Content, Media, Prisma } from '@prisma/client';
 
 // Type for content with media relations
@@ -18,8 +27,11 @@ export class ContentService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createContent(dto: CreateContentDto, userId: string, clientId: string): Promise<ContentWithMedia> {
-
+  async createContent(
+    dto: CreateContentDto,
+    userId: string,
+    clientId: string,
+  ): Promise<ContentWithMedia> {
     const publicUrl = 'https://pub-d773025cd8974c48920973fa89738174.r2.dev';
 
     const content = await this.prisma.content.create({
@@ -47,7 +59,9 @@ export class ContentService {
       },
     });
 
-    this.logger.log(`Created content ${content.id} with ${dto.media.length} media files`);
+    this.logger.log(
+      `Created content ${content.id} with ${dto.media.length} media files`,
+    );
     return { ...content, publications: [] };
   }
 
@@ -86,7 +100,11 @@ export class ContentService {
     });
   }
 
-  async updateContent(id: string, clientId: string, dto: UpdateContentDto): Promise<ContentWithMedia> {
+  async updateContent(
+    id: string,
+    clientId: string,
+    dto: UpdateContentDto,
+  ): Promise<ContentWithMedia> {
     await this.getContent(id, clientId);
 
     return this.prisma.content.update({
@@ -101,7 +119,11 @@ export class ContentService {
     });
   }
 
-  async addMedia(id: string, clientId: string, dto: AddMediaToContentDto): Promise<ContentWithMedia> {
+  async addMedia(
+    id: string,
+    clientId: string,
+    dto: AddMediaToContentDto,
+  ): Promise<ContentWithMedia> {
     await this.getContent(id, clientId);
 
     const maxOrder = await this.prisma.media.findFirst({

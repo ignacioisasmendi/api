@@ -1,11 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IPlatformPublisher, PublicationWithRelations, ValidationResult, PublishResult } from './interfaces/platform-publisher.interface';
+import {
+  IPlatformPublisher,
+  PublicationWithRelations,
+  ValidationResult,
+  PublishResult,
+} from './interfaces/platform-publisher.interface';
 
 @Injectable()
 export class XPublisher implements IPlatformPublisher {
   private readonly logger = new Logger(XPublisher.name);
 
-  async validatePayload(payload: Record<string, unknown>, _format: string): Promise<ValidationResult> {
+  async validatePayload(
+    payload: Record<string, unknown>,
+    _format: string,
+  ): Promise<ValidationResult> {
     const errors: string[] = [];
 
     if (!payload.text) {
@@ -30,7 +38,9 @@ export class XPublisher implements IPlatformPublisher {
     };
   }
 
-  async publish(_publication: PublicationWithRelations): Promise<PublishResult> {
+  async publish(
+    _publication: PublicationWithRelations,
+  ): Promise<PublishResult> {
     this.logger.warn('X (Twitter) publisher not yet implemented');
 
     // TODO: Implement X (Twitter) API integration

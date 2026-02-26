@@ -38,17 +38,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       errorName = exception.name || 'HttpException';
-      
+
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object') {
         message = exceptionResponse;
       }
-      
+
       if (exception.stack) {
         stack = exception.stack;
       }
-    } 
+    }
     // Handle standard Error objects
     else if (exception instanceof Error) {
       errorName = exception.name || 'Error';
@@ -72,40 +72,57 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const method = request?.method || 'UNKNOWN';
     const url = request?.url || 'UNKNOWN';
     const ip = request?.ip || 'UNKNOWN';
-    const userAgent = request?.get ? (request.get('user-agent') || 'N/A') : 'N/A';
-    
+    const userAgent = request?.get ? request.get('user-agent') || 'N/A' : 'N/A';
+
     // Format message for logging
-    const messageStr = typeof message === 'string' ? message : this.safeStringify(message);
+    const messageStr =
+      typeof message === 'string' ? message : this.safeStringify(message);
     const bodyStr = this.safeStringify(request?.body);
     const queryStr = this.safeStringify(request?.query);
     const paramsStr = this.safeStringify(request?.params);
 
     // Log the error with full details
-    this.logger.error('╔════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╔════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ 🔴 EXCEPTION CAUGHT');
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error(`║ Error Name:    ${errorName}`);
     this.logger.error(`║ Status Code:   ${status}`);
     this.logger.error(`║ Method:        ${method}`);
     this.logger.error(`║ Path:          ${url}`);
     this.logger.error(`║ IP:            ${ip}`);
     this.logger.error(`║ User Agent:    ${userAgent}`);
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ Message:');
     this.logger.error(`║ ${messageStr}`);
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ Request Body:');
     this.logger.error(`║ ${bodyStr}`);
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ Request Query:');
     this.logger.error(`║ ${queryStr}`);
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ Request Params:');
     this.logger.error(`║ ${paramsStr}`);
-    this.logger.error('╠════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╠════════════════════════════════════════════════════════════════════════════',
+    );
     this.logger.error('║ Stack Trace:');
     this.logger.error(`║ ${stack}`);
-    this.logger.error('╚════════════════════════════════════════════════════════════════════════════');
+    this.logger.error(
+      '╚════════════════════════════════════════════════════════════════════════════',
+    );
 
     // Send error response
     const errorResponse = {
