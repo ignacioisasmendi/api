@@ -9,6 +9,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -104,6 +105,25 @@ export class StorageService {
     } catch (error) {
       this.logger.error({ err: error, key }, `Failed to delete file ${key}`);
       throw new InternalServerErrorException('Failed to delete file');
+    }
+  }
+
+  /**
+   * Generate presigned GET URL for private bucket access
+   */
+  async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      return await getSignedUrl(this.r2Client, command, { expiresIn });
+    } catch (error) {
+      this.logger.error(
+        { err: error, key },
+        `Failed to generate signed URL for ${key}`,
+      );
+      throw new InternalServerErrorException('Failed to generate signed URL');
     }
   }
 

@@ -21,6 +21,7 @@ import { KanbanColumnModule } from './kanban-columns/kanban-column.module';
 import { ShareLinkModule } from './share-links/share-link.module';
 import { PublicShareModule } from './public-share/public-share.module';
 import { ClientModule } from './clients/client.module';
+import { MediaModule } from './media/media.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -74,6 +75,7 @@ import { LoggerModule } from 'nestjs-pino';
     ShareLinkModule,
     PublicShareModule,
     ClientModule,
+    MediaModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
