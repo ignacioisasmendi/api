@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { pipeline } from 'stream/promises';
+import axios from 'axios';
 import {
   IPlatformPublisher,
   PublicationWithRelations,
   ValidationResult,
   PublishResult,
 } from './interfaces/platform-publisher.interface';
-import { TiktokCreatorService } from '../tiktok/creator/tiktok-creator.service';
 import { TiktokPostService } from '../tiktok/post/tiktok-post.service';
 import { InitDirectPostDto } from '../tiktok/post/dto/init-direct-post.dto';
 import {
@@ -19,7 +23,6 @@ export class TikTokPublisher implements IPlatformPublisher {
   private readonly logger = new Logger(TikTokPublisher.name);
 
   constructor(
-    private readonly tiktokCreatorService: TiktokCreatorService,
     private readonly tiktokPostService: TiktokPostService,
   ) {}
 
@@ -51,60 +54,52 @@ export class TikTokPublisher implements IPlatformPublisher {
   }
 
   async publish(publication: PublicationWithRelations): Promise<PublishResult> {
-    try {
-      this.logger.log(`Publishing to TikTok: ${publication.id}`);
+    this.logger.log(`Publishing to TikTok: ${publication.id}`);
 
-      const { socialAccount, content, mediaUsage } = publication;
+    const { socialAccount, content, mediaUsage } = publication;
 
-      if (!socialAccount.accessToken || !socialAccount.refreshToken) {
-        return {
-          success: false,
-          message: 'Missing TikTok tokens',
-          error: 'Social account is missing access_token or refresh_token',
-        };
-      }
-
-      if (!mediaUsage.length || mediaUsage[0].media.type !== 'VIDEO') {
-        return {
-          success: false,
-          message: 'No video media found',
-          error: 'TikTok publishing requires a video file',
-        };
-      }
-
-      const videoMedia = mediaUsage[0].media;
-      const caption = publication.customCaption || content.caption || '';
-
-      // Use auto-retry wrapper to handle token expiration
-      return await this.tiktokPostService.executeWithTokenRefresh(
-        socialAccount.id,
-        socialAccount.refreshToken,
-        socialAccount.accessToken,
-        async (accessToken: string) => {
-          return await this.publishWithToken(
-            accessToken,
-            caption,
-            videoMedia,
-            publication.platformConfig as Record<string, unknown> | null,
-            publication.id,
-          );
-        },
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to publish to TikTok: ${error.message}`,
-        error.stack,
-      );
+    if (!socialAccount.accessToken || !socialAccount.refreshToken) {
       return {
         success: false,
-        message: 'Failed to publish to TikTok',
-        error: error.message,
+        message: 'Missing TikTok tokens',
+        error: 'Social account is missing access_token or refresh_token',
       };
     }
+
+    if (!mediaUsage.length || mediaUsage[0].media.type !== 'VIDEO') {
+      return {
+        success: false,
+        message: 'No video media found',
+        error: 'TikTok publishing requires a video file',
+      };
+    }
+
+    const videoMedia = mediaUsage[0].media;
+    const caption = publication.customCaption || content.caption || '';
+
+    // Use auto-retry wrapper to handle token expiration
+    return await this.tiktokPostService.executeWithTokenRefresh(
+      socialAccount.id,
+      socialAccount.refreshToken,
+      socialAccount.accessToken,
+      async (accessToken: string) => {
+        return await this.publishWithToken(
+          accessToken,
+          caption,
+          videoMedia,
+          publication.platformConfig as Record<string, unknown> | null,
+          publication.id,
+        );
+      },
+    );
   }
 
   /**
    * Core publishing logic, called with a valid (possibly refreshed) access_token.
+   *
+   * Always uses FILE_UPLOAD: downloads the video from R2 to a temp file and
+   * streams it to TikTok's upload URL. PULL_FROM_URL requires extra app-level
+   * permissions in the TikTok developer portal that FILE_UPLOAD does not need.
    */
   private async publishWithToken(
     accessToken: string,
@@ -113,82 +108,83 @@ export class TikTokPublisher implements IPlatformPublisher {
     platformConfig: Record<string, unknown> | null,
     publicationId: string,
   ): Promise<PublishResult> {
-    // 1. Query creator info to validate privacy level support
-    const creatorInfo =
-      await this.tiktokCreatorService.queryCreatorInfo(accessToken);
-
-    // Determine privacy level — use platformConfig override or default to SELF_ONLY
-    const requestedPrivacy =
-      (platformConfig?.privacy_level as TikTokPrivacyLevel) ??
-      TikTokPrivacyLevel.SELF_ONLY;
-
-    if (!creatorInfo.privacy_level_options.includes(requestedPrivacy)) {
-      this.logger.warn(
-        `Requested privacy "${requestedPrivacy}" not available. Falling back to SELF_ONLY.`,
-      );
-    }
-
-    const effectivePrivacy = creatorInfo.privacy_level_options.includes(
-      requestedPrivacy,
-    )
-      ? requestedPrivacy
-      : (creatorInfo.privacy_level_options[0] as TikTokPrivacyLevel);
-
-    // 2. Determine source type
-    const isPublicUrl =
-      videoMedia.url.startsWith('http://') ||
-      videoMedia.url.startsWith('https://');
-    const sourceType = isPublicUrl
-      ? TikTokSourceType.PULL_FROM_URL
-      : TikTokSourceType.FILE_UPLOAD;
-
-    // 3. Build the DTO
-    const dto = new InitDirectPostDto();
-    dto.title = caption.substring(0, 150); // TikTok title max 150 chars
-    dto.privacy_level = effectivePrivacy;
-    dto.disable_comment =
-      (platformConfig?.disable_comment as boolean) ??
-      creatorInfo.comment_disabled;
-    dto.disable_duet =
-      (platformConfig?.disable_duet as boolean) ?? creatorInfo.duet_disabled;
-    dto.disable_stitch =
-      (platformConfig?.disable_stitch as boolean) ??
-      creatorInfo.stitch_disabled;
-    dto.source_type = sourceType;
-
-    if (sourceType === TikTokSourceType.PULL_FROM_URL) {
-      dto.video_url = videoMedia.url;
-    } else {
-      dto.video_size = videoMedia.size;
-      dto.file_path = videoMedia.url; // Local path for FILE_UPLOAD
-    }
-
-    // 4. Initialize the direct post
-    const initData = await this.tiktokPostService.initDirectPost(
-      accessToken,
-      dto,
+    const tempFilePath = path.join(
+      os.tmpdir(),
+      `tiktok_${publicationId}_${Date.now()}.mp4`,
     );
 
-    // 5. Upload the video if FILE_UPLOAD
-    if (
-      sourceType === TikTokSourceType.FILE_UPLOAD &&
-      isFileUploadInitData(initData)
-    ) {
+    try {
+      // 1. Download video from R2 to a local temp file
+      await this.downloadToTemp(videoMedia.url, tempFilePath);
+      const fileSize = fs.statSync(tempFilePath).size;
+
+      // 2. Build the DTO using stored platformConfig settings
+      const dto = new InitDirectPostDto();
+      dto.title = caption.substring(0, 150);
+      dto.privacy_level =
+        (platformConfig?.privacy_level as TikTokPrivacyLevel) ??
+        TikTokPrivacyLevel.SELF_ONLY;
+      dto.disable_comment =
+        (platformConfig?.disable_comment as boolean) ?? false;
+      dto.disable_duet = (platformConfig?.disable_duet as boolean) ?? false;
+      dto.disable_stitch =
+        (platformConfig?.disable_stitch as boolean) ?? false;
+      dto.source_type = TikTokSourceType.FILE_UPLOAD;
+      dto.video_size = fileSize;
+
+      // 3. Initialize the direct post
+      const initData = await this.tiktokPostService.initDirectPost(
+        accessToken,
+        dto,
+      );
+
+      // 4. Upload the video bytes to TikTok's upload URL
+      if (!isFileUploadInitData(initData)) {
+        throw new Error('Expected upload_url in FILE_UPLOAD response');
+      }
+
       await this.tiktokPostService.uploadVideo(
         initData.upload_url,
-        dto.file_path!,
-        dto.video_size!,
+        tempFilePath,
+        fileSize,
       );
+
+      this.logger.log(
+        `TikTok post initiated successfully — publish_id: ${initData.publish_id}`,
+      );
+
+      return {
+        success: true,
+        platformId: initData.publish_id,
+        message: 'TikTok video published successfully (FILE_UPLOAD)',
+      };
+    } finally {
+      // Always clean up the temp file
+      try {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+          this.logger.log(`Cleaned up temp file: ${tempFilePath}`);
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to clean up temp file: ${tempFilePath}`, err);
+      }
     }
+  }
 
-    this.logger.log(
-      `TikTok post initiated successfully — publish_id: ${initData.publish_id}`,
-    );
+  /**
+   * Stream-download a remote video URL to a local file path.
+   * Uses streaming so the file is never fully buffered in memory.
+   */
+  private async downloadToTemp(url: string, destPath: string): Promise<void> {
+    this.logger.log(`Downloading video to temp file: ${url}`);
 
-    return {
-      success: true,
-      platformId: initData.publish_id,
-      message: `TikTok video published successfully (${sourceType})`,
-    };
+    const response = await axios.get<NodeJS.ReadableStream>(url, {
+      responseType: 'stream',
+    });
+
+    const writer = fs.createWriteStream(destPath);
+    await pipeline(response.data, writer);
+
+    this.logger.log(`Download complete: ${destPath}`);
   }
 }

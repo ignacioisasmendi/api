@@ -80,7 +80,7 @@ export class TiktokPostService {
     const body: DirectPostInitRequestBody = {
       post_info: {
         title: dto.title,
-        privacy_level: 'SELF_ONLY',
+        privacy_level: dto.privacy_level,
         disable_comment: dto.disable_comment,
         disable_duet: dto.disable_duet,
         disable_stitch: dto.disable_stitch,
