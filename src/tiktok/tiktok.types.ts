@@ -64,8 +64,8 @@ export interface DirectPostInitRequestBody {
     title: string;
     privacy_level: string;
     disable_comment: boolean;
-    disable_duet: boolean;
-    disable_stitch: boolean;
+    disable_duet?: boolean;
+    disable_stitch?: boolean;
   };
   source_info: {
     source: string; // 'FILE_UPLOAD' | 'PULL_FROM_URL'

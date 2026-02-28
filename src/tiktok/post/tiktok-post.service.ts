@@ -10,6 +10,7 @@ import {
   TIKTOK_UPLOAD_CHUNK_SIZE,
   TIKTOK_SINGLE_UPLOAD_MAX_SIZE,
   TikTokSourceType,
+  TikTokPrivacyLevel,
 } from '../tiktok.constants';
 import {
   DirectPostInitResponse,
@@ -77,13 +78,21 @@ export class TiktokPostService {
     const url = `${this.apiUrl}${TIKTOK_ENDPOINTS.DIRECT_POST_INIT}`;
 
     // Build the request body per TikTok's spec
+    // disable_duet / disable_stitch are only valid for PUBLIC_TO_EVERYONE and
+    // MUTUAL_FOLLOW_FRIENDS — sending them for SELF_ONLY causes a 403.
+    const isPublicLevel =
+      dto.privacy_level === TikTokPrivacyLevel.PUBLIC_TO_EVERYONE ||
+      dto.privacy_level === TikTokPrivacyLevel.MUTUAL_FOLLOW_FRIENDS;
+
     const body: DirectPostInitRequestBody = {
       post_info: {
         title: dto.title,
         privacy_level: dto.privacy_level,
         disable_comment: dto.disable_comment,
-        disable_duet: dto.disable_duet,
-        disable_stitch: dto.disable_stitch,
+        ...(isPublicLevel && {
+          disable_duet: dto.disable_duet,
+          disable_stitch: dto.disable_stitch,
+        }),
       },
       source_info: {
         source: dto.source_type,
@@ -111,14 +120,31 @@ export class TiktokPostService {
       `Initializing TikTok direct post (${dto.source_type}) — title: "${dto.title}"`,
     );
 
-    const { data: response } = await firstValueFrom(
-      this.httpService.post<DirectPostInitResponse>(url, body, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
+    let response: DirectPostInitResponse;
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post<DirectPostInitResponse>(url, body, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+        }),
+      );
+      response = data;
+    } catch (err: any) {
+      // Log TikTok's response body so the real error code is visible in logs
+      const status = err?.response?.status;
+      const tiktokError = err?.response?.data;
+      this.logger.error(
+        {
+          status,
+          tiktokError,
+          requestBody: body,
         },
-      }),
-    );
+        `TikTok direct post init HTTP error (${status})`,
+      );
+      throw err;
+    }
 
     if (response.error.code !== TIKTOK_ERROR_CODES.OK) {
       this.logger.error(

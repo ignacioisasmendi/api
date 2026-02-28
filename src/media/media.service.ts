@@ -11,6 +11,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../shared/storage/storage.service';
 import { ReorderMediaDto } from './dto/reorder-media.dto';
 import { MediaResponseDto } from './dto/media-response.dto';
+import {
+  PaginationDto,
+  PaginatedResponse,
+} from '../common/dto/pagination.dto';
 
 const ALLOWED_IMAGE_TYPES = new Set([
   'image/jpeg',
@@ -220,6 +224,40 @@ export class MediaService {
     );
 
     return this.listMedia(contentId, clientId);
+  }
+
+  async listClientMedia(
+    clientId: string,
+    pagination: PaginationDto,
+  ): Promise<PaginatedResponse<MediaResponseDto>> {
+    const [total, mediaList] = await this.prisma.$transaction([
+      this.prisma.media.count({
+        where: { content: { clientId } },
+      }),
+      this.prisma.media.findMany({
+        where: { content: { clientId } },
+        orderBy: { createdAt: 'desc' },
+        skip: pagination.skip,
+        take: pagination.limit,
+      }),
+    ]);
+
+    const data = await Promise.all(
+      mediaList.map(async (m) => ({
+        ...m,
+        signedUrl: await this.storage.getSignedUrl(m.key),
+      })),
+    );
+
+    return {
+      data,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    };
   }
 
   private async getNextOrder(contentId: string): Promise<number> {

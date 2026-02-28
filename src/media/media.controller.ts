@@ -18,6 +18,7 @@ import { memoryStorage } from 'multer';
 import { MediaService } from './media.service';
 import { ReorderMediaDto } from './dto/reorder-media.dto';
 import { GetClientId } from '../decorators/get-client-id.decorator';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller()
 export class MediaController {
@@ -47,6 +48,18 @@ export class MediaController {
     const parsedOrder =
       order !== undefined ? parseInt(order, 10) : undefined;
     return this.mediaService.uploadMedia(contentId, clientId, file, parsedOrder);
+  }
+
+  /**
+   * List all media for the active client with signed URLs
+   * GET /media
+   */
+  @Get('media')
+  async listClient(
+    @GetClientId() clientId: string,
+    @Query() pagination: PaginationDto,
+  ) {
+    return this.mediaService.listClientMedia(clientId, pagination);
   }
 
   /**
