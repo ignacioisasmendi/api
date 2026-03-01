@@ -27,7 +27,7 @@ export class TkOauthController {
       tokenData.access_token,
     );
 
-    this.logger.log('tiktok token data', tokenData);
+    this.logger.log(tokenData);
     // 3. Crear o reactivar la cuenta social asociada al usuario y client actual
     await this.prismaService.socialAccount.upsert({
       where: {

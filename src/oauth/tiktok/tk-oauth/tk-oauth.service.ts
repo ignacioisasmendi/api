@@ -32,6 +32,7 @@ export class TkOauthService {
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
       );
 
+      this.logger.log(data);
       return data;
     } catch (error) {
       this.logger.error('TikTok token exchange failed');
