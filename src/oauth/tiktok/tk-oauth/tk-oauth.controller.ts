@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Logger, Post } from '@nestjs/common';
 import { TkOauthService } from './tk-oauth.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GetUser, GetClientId } from 'src/decorators';
@@ -7,6 +7,7 @@ import { TkOauthCallbackDto } from './dto/tk-oauth-callback.dto';
 
 @Controller('/auth/tiktok')
 export class TkOauthController {
+  private readonly logger = new Logger(TkOauthController.name);
   constructor(
     private readonly tkOauthService: TkOauthService,
     private readonly prismaService: PrismaService,
@@ -26,6 +27,7 @@ export class TkOauthController {
       tokenData.access_token,
     );
 
+    this.logger.log('tiktok token data', tokenData);
     // 3. Crear o reactivar la cuenta social asociada al usuario y client actual
     await this.prismaService.socialAccount.upsert({
       where: {
