@@ -50,8 +50,9 @@ model SocialAccount {
   platform       Platform
   accessToken    String? // Deberías encriptar esto en la aplicación
   refreshToken   String? // Para renovar el accessToken
-  expiresAt      DateTime?
-  platformUserId String? // ID del usuario en la plataforma (ej: Instagram User ID)
+  expiresAt        DateTime?
+  refreshExpiresAt DateTime? // Expiry of the refresh token itself
+  platformUserId   String? // ID del usuario en la plataforma (ej: Instagram User ID)
   username       String? // Nombre de usuario en la plataforma
   metadata       Json? // Para datos adicionales específicos de cada plataforma
   isActive       Boolean  @default(true)

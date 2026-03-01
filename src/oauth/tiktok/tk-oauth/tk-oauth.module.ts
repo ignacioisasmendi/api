@@ -6,5 +6,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Module({
   controllers: [TkOauthController],
   providers: [TkOauthService, PrismaService],
+  exports: [TkOauthService],
 })
 export class TkOauthModule {}

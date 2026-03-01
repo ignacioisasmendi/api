@@ -46,12 +46,18 @@ export class TkOauthController {
         platformUserId: tokenData.open_id,
         username: tiktokUser.display_name,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        refreshExpiresAt: new Date(
+          Date.now() + tokenData.refresh_expires_in * 1000,
+        ),
       },
       update: {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         username: tiktokUser.display_name,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        refreshExpiresAt: new Date(
+          Date.now() + tokenData.refresh_expires_in * 1000,
+        ),
         isActive: true,
         disconnectedAt: null,
       },
