@@ -35,6 +35,7 @@ const PUBLICATION_SELECT = {
   platformConfig: true,
   platformId: true,
   link: true,
+  containerId: true,
   contentId: true,
   socialAccountId: true,
   kanbanColumnId: true,
@@ -275,21 +276,50 @@ export class PublicationService {
   }
 
   /**
-   * Used by the cron job — returns full relations including tokens needed for publishing.
-   * The `take` param enforces the configured batch size to prevent DB overload.
+   * Returns SCHEDULED publications whose publishAt is within the prepare window.
+   * These will have their containers pre-created so the final publish is near-instant.
    */
-  async getScheduledPublications(
+  async getPublicationsToPrepare(
+    prepareBeforeMs: number,
     take: number,
   ): Promise<PublicationWithRelations[]> {
+    const prepareHorizon = new Date(Date.now() + prepareBeforeMs);
     return this.prisma.publication.findMany({
       where: {
-        publishAt: { lte: new Date() },
+        publishAt: { lte: prepareHorizon },
         status: PublicationStatus.SCHEDULED,
       },
       include: PUBLICATION_FULL_INCLUDE,
       orderBy: { publishAt: 'asc' },
       take,
     });
+  }
+
+  /**
+   * Returns READY publications whose publishAt has arrived.
+   * Also picks up SCHEDULED publications that missed the prepare window (fallback).
+   */
+  async getPublicationsToPublish(
+    take: number,
+  ): Promise<PublicationWithRelations[]> {
+    return this.prisma.publication.findMany({
+      where: {
+        publishAt: { lte: new Date() },
+        status: { in: [PublicationStatus.READY, PublicationStatus.SCHEDULED] },
+      },
+      include: PUBLICATION_FULL_INCLUDE,
+      orderBy: { publishAt: 'asc' },
+      take,
+    });
+  }
+
+  /**
+   * @deprecated Use getPublicationsToPublish() instead. Kept for backward compatibility.
+   */
+  async getScheduledPublications(
+    take: number,
+  ): Promise<PublicationWithRelations[]> {
+    return this.getPublicationsToPublish(take);
   }
 
   async moveToKanbanColumn(
@@ -337,6 +367,7 @@ export class PublicationService {
     error?: string,
     platformId?: string,
     link?: string,
+    containerId?: string,
   ) {
     return this.prisma.publication.update({
       where: { id },
@@ -345,6 +376,7 @@ export class PublicationService {
         ...(error && { error }),
         ...(platformId && { platformId }),
         ...(link && { link }),
+        ...(containerId && { containerId }),
       },
     });
   }

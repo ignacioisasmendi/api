@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PublicationService } from '../publications/publication.service';
 import { PublisherFactory } from '../publishers/publisher.factory';
@@ -8,51 +8,132 @@ import { PublicationStatus } from '@prisma/client';
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
-  private readonly cronSchedule: string;
-  private readonly logEveryRun: boolean;
   private readonly batchSize: number;
+  private readonly prepareBeforeMs: number;
 
   constructor(
     private readonly publicationService: PublicationService,
     private readonly publisherFactory: PublisherFactory,
     private readonly configService: ConfigService,
   ) {
-    this.cronSchedule = this.configService.get<string>(
-      'cron.publisherSchedule',
-    )!;
-    this.logEveryRun = this.configService.get<boolean>('cron.logEveryRun')!;
     this.batchSize = this.configService.get<number>('cron.batchSize')!;
+    this.prepareBeforeMs =
+      this.configService.get<number>('cron.prepareBeforeMinutes')! * 60_000;
   }
 
-  @Cron('*/2 * * * * *') // Note: Dynamic cron expression requires additional setup
-  async handleCron() {
-    /*   if (this.logEveryRun) {
-      this.logger.log('Running scheduled publications check...');
-    } */
+  // ─── Phase 1: Prepare containers ahead of time ────────────────────────
 
+  @Cron('*/10 * * * * *')
+  async handlePrepare() {
     try {
-      // Find publications due for publishing (limited by batch size)
-      const publicationsToPublish =
-        await this.publicationService.getScheduledPublications(5);
+      const publications =
+        await this.publicationService.getPublicationsToPrepare(
+          this.prepareBeforeMs,
+          this.batchSize,
+        );
 
-      // Limit to batch size to prevent overload
-      const batch = publicationsToPublish.slice(0, this.batchSize);
-
-      if (batch.length === 0) {
-        /* if (this.logEveryRun) {
-          this.logger.log('No publications to publish at this time');
-        } */
-        return;
-      }
+      if (publications.length === 0) return;
 
       this.logger.log(
-        `Found ${batch.length} publication(s) to publish (batch size: ${this.batchSize})`,
+        `Found ${publications.length} publication(s) to prepare`,
       );
 
-      // Process each publication
-      for (const publication of batch) {
+      for (const publication of publications) {
         try {
-          // Update status to PUBLISHING
+          const publisher = this.publisherFactory.getPublisher(
+            publication.socialAccount.platform,
+          );
+
+          // Skip platforms that don't support preparation
+          if (!publisher.prepare) {
+            continue;
+          }
+
+          // Mark as PREPARING to prevent other cron runs from picking it up
+          await this.publicationService.updatePublicationStatus(
+            publication.id,
+            PublicationStatus.PREPARING,
+          );
+
+          this.logger.log(
+            `Preparing ${publication.socialAccount.platform} ${publication.format} (${publication.id})...`,
+          );
+
+          const result = await publisher.prepare(publication);
+
+          if (result.success && result.containerId) {
+            await this.publicationService.updatePublicationStatus(
+              publication.id,
+              PublicationStatus.READY,
+              undefined, // no error
+              undefined, // no platformId yet
+              undefined, // no link yet
+              result.containerId,
+            );
+
+            this.logger.log(
+              `Container ready for ${publication.id}: ${result.containerId}`,
+            );
+          } else {
+            // Preparation failed — revert to SCHEDULED so it falls through
+            // to the full publish flow at publishAt time
+            await this.publicationService.updatePublicationStatus(
+              publication.id,
+              PublicationStatus.SCHEDULED,
+              result.error || 'Preparation failed, will retry at publish time',
+            );
+
+            this.logger.warn(
+              `Prepare failed for ${publication.id}: ${result.error}. Will fall back to full publish.`,
+            );
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(
+            { err: error, publicationId: publication.id },
+            `Failed to prepare publication ${publication.id}: ${errorMessage}`,
+          );
+
+          // Revert to SCHEDULED so the publish cron can still try the full flow
+          try {
+            await this.publicationService.updatePublicationStatus(
+              publication.id,
+              PublicationStatus.SCHEDULED,
+              `Prepare error: ${errorMessage}`,
+            );
+          } catch (dbError) {
+            this.logger.error(
+              { err: dbError, publicationId: publication.id },
+              'Failed to revert publication status after prepare failure',
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        { err: error },
+        'Prepare cron job failed to fetch/process publications batch',
+      );
+    }
+  }
+
+  // ─── Phase 2: Publish at the scheduled time ───────────────────────────
+
+  @Cron('*/2 * * * * *')
+  async handlePublish() {
+    try {
+      const publications =
+        await this.publicationService.getPublicationsToPublish(this.batchSize);
+
+      if (publications.length === 0) return;
+
+      this.logger.log(
+        `Found ${publications.length} publication(s) to publish`,
+      );
+
+      for (const publication of publications) {
+        try {
           await this.publicationService.updatePublicationStatus(
             publication.id,
             PublicationStatus.PUBLISHING,
@@ -62,20 +143,17 @@ export class CronService {
             `Publishing ${publication.socialAccount.platform} ${publication.format} (${publication.id})...`,
           );
 
-          // Get the appropriate publisher for the platform
           const publisher = this.publisherFactory.getPublisher(
             publication.socialAccount.platform,
           );
 
-          // Publish using the platform-specific publisher
           const result = await publisher.publish(publication);
 
           if (result.success) {
-            // Update status to PUBLISHED, along with platformId and link
             await this.publicationService.updatePublicationStatus(
               publication.id,
               PublicationStatus.PUBLISHED,
-              undefined, // no error
+              undefined,
               result.platformId,
               result.link,
             );
@@ -85,7 +163,6 @@ export class CronService {
               `Successfully published ${publication.socialAccount.platform} ${publication.format} (${publication.id}): ${result.message}${linkInfo}`,
             );
           } else {
-            // Update status to ERROR if publish failed
             await this.publicationService.updatePublicationStatus(
               publication.id,
               PublicationStatus.ERROR,
@@ -117,7 +194,7 @@ export class CronService {
           } catch (dbError) {
             this.logger.error(
               { err: dbError, publicationId: publication.id },
-              `Failed to update publication status to ERROR after publish failure`,
+              'Failed to update publication status to ERROR after publish failure',
             );
           }
         }
@@ -125,7 +202,7 @@ export class CronService {
     } catch (error) {
       this.logger.error(
         { err: error },
-        'Cron job failed to fetch/process publications batch',
+        'Publish cron job failed to fetch/process publications batch',
       );
     }
   }

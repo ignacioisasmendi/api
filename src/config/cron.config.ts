@@ -4,6 +4,13 @@ export default registerAs('cron', () => ({
   // Cron Schedule Configuration
   publisherSchedule: process.env.CRON_PUBLISHER_SCHEDULE || '*/30 * * * * *', // Every 30 seconds
 
+  // Two-Phase Publishing
+  // How many minutes before publishAt to pre-create containers (default: 5 minutes)
+  prepareBeforeMinutes: parseInt(
+    process.env.CRON_PREPARE_BEFORE_MINUTES || '5',
+    10,
+  ),
+
   // Retry Configuration
   maxRetries: parseInt(process.env.CRON_MAX_RETRIES || '3', 10),
   retryDelayMs: parseInt(process.env.CRON_RETRY_DELAY_MS || '5000', 10),

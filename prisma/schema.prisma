@@ -108,6 +108,7 @@ model Publication {
   platformConfig  Json?             // Platform-specific settings
   platformId      String?
   link            String?
+  containerId     String?           // Pre-created container ID for two-phase publishing
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -193,6 +194,8 @@ enum ContentFormat {
 
 enum PublicationStatus {
   SCHEDULED
+  PREPARING
+  READY
   PUBLISHING
   PUBLISHED
   ERROR
