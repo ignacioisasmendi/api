@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import * as cookieParser from 'cookie-parser';
+import "./instrument.ts";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });

@@ -27,9 +27,13 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { SentryModule } from '@sentry/nestjs/setup';
+import { APP_FILTER } from '@nestjs/core';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     LoggerModule.forRoot({
       pinoHttp: {
         transport:
@@ -113,6 +117,10 @@ import { LoggerModule } from 'nestjs-pino';
     {
       provide: APP_INTERCEPTOR,
       useClass: ClientInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
     },
   ],
 })
