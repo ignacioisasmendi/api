@@ -14,6 +14,12 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @IsPublic()
+  @Get("/debug-sentry")
+  getError() {
+    throw new Error("My first Sentry error!");
+  }
+
   @Get('me')
   getProfile(@GetUser() user: User) {
     // El usuario ya está autenticado y guardado en la BD gracias al guard global
