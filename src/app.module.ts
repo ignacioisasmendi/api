@@ -22,6 +22,7 @@ import { ShareLinkModule } from './share-links/share-link.module';
 import { PublicShareModule } from './public-share/public-share.module';
 import { ClientModule } from './clients/client.module';
 import { MediaModule } from './media/media.module';
+import { InstagramInsightsModule } from './instagram-insights/instagram-insights.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -80,6 +81,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     PublicShareModule,
     ClientModule,
     MediaModule,
+    InstagramInsightsModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
