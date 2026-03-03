@@ -204,28 +204,37 @@ export class InstagramPublisher implements IPlatformPublisher {
     const media = publication.mediaUsage[0]?.media;
 
     if (!media) {
-      throw new Error('Feed post requires at least one image');
+      throw new Error('Feed post requires at least one image or video');
     }
 
     const caption =
       publication.customCaption || publication.content.caption || '';
 
+    const isVideo = media.type === 'VIDEO';
+    const params = new URLSearchParams({ caption, access_token: socialAccount.accessToken! });
+    if (isVideo) {
+      // Instagram deprecated standalone video feed posts — videos must use the Reels
+      // container with share_to_feed: true to appear in the feed.
+      params.append('video_url', media.url);
+      params.append('media_type', 'REELS');
+      params.append('share_to_feed', 'true');
+    } else {
+      params.append('image_url', media.url);
+    }
+
     const data = await this.callInstagramApi(
       `${this.apiUrl}/${socialAccount.platformUserId}/media`,
-      new URLSearchParams({
-        image_url: media.url,
-        caption,
-        access_token: socialAccount.accessToken!,
-      }),
+      params,
       'createMediaContainer',
     );
 
     this.logger.log(`Feed container created with ID: ${data.id}`);
 
+    const processingWait = isVideo ? this.videoProcessingWaitTime : this.mediaProcessingWaitTime;
     await this.waitForMediaProcessing(
       data.id,
       socialAccount.accessToken!,
-      this.mediaProcessingWaitTime,
+      processingWait,
     );
 
     return data.id;

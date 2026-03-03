@@ -25,11 +25,11 @@ export default registerAs('instagram', () => ({
 
   // Media Processing
   mediaProcessingWaitTime: parseInt(
-    process.env.INSTAGRAM_MEDIA_WAIT_TIME || '1000',
+    process.env.INSTAGRAM_MEDIA_WAIT_TIME || '30000',
     10,
   ),
   videoProcessingWaitTime: parseInt(
-    process.env.INSTAGRAM_VIDEO_WAIT_TIME || '5000',
+    process.env.INSTAGRAM_VIDEO_WAIT_TIME || '300000',
     10,
   ),
 
