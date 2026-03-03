@@ -6,5 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 @Module({
   controllers: [InstagramInsightsController],
   providers: [InstagramInsightsService, PrismaService],
+  exports: [InstagramInsightsService],
 })
 export class InstagramInsightsModule {}
