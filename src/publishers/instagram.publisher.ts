@@ -118,7 +118,7 @@ export class InstagramPublisher implements IPlatformPublisher {
           `Using pre-created container ${publication.containerId} for publication ${publication.id}`,
         );
 
-        const publishedMediaId = await this.publishMedia(
+        const { id: publishedMediaId, permalink } = await this.publishMedia(
           publication.containerId,
           socialAccount.platformUserId!,
           socialAccount.accessToken!,
@@ -127,7 +127,7 @@ export class InstagramPublisher implements IPlatformPublisher {
         return {
           success: true,
           platformId: publishedMediaId,
-          link: this.buildLink(publication.format, publishedMediaId),
+          link: permalink,
           message: `${publication.format} published successfully to Instagram`,
         };
       }
@@ -168,7 +168,7 @@ export class InstagramPublisher implements IPlatformPublisher {
           };
       }
 
-      const publishedMediaId = await this.publishMedia(
+      const { id: publishedMediaId, permalink } = await this.publishMedia(
         containerId,
         socialAccount.platformUserId!,
         socialAccount.accessToken!,
@@ -177,7 +177,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       return {
         success: true,
         platformId: publishedMediaId,
-        link: this.buildLink(publication.format, publishedMediaId),
+        link: permalink,
         message: `${publication.format} published successfully to Instagram`,
       };
     } catch (error) {
@@ -463,28 +463,15 @@ export class InstagramPublisher implements IPlatformPublisher {
 
   // ─── Helpers ──────────────────────────────────────────────────────────
 
-  private buildLink(format: ContentFormat, platformId: string): string | undefined {
-    switch (format) {
-      case ContentFormat.FEED:
-      case ContentFormat.CAROUSEL:
-        return `https://www.instagram.com/p/${platformId}`;
-      case ContentFormat.REEL:
-        return `https://www.instagram.com/reel/${platformId}`;
-      case ContentFormat.STORY:
-        return undefined;
-      default:
-        return undefined;
-    }
-  }
-
-  /**
+/**
    * Publish a previously created media container.
+   * Returns { id, permalink } fetched right after publishing.
    */
   private async publishMedia(
     creationId: string,
     platformUserId: string,
     accessToken: string,
-  ): Promise<string> {
+  ): Promise<{ id: string; permalink?: string }> {
     this.logger.log(`Publishing media to Instagram`);
 
     const data = await this.callInstagramApi(
@@ -496,7 +483,21 @@ export class InstagramPublisher implements IPlatformPublisher {
       'publishMedia',
     );
 
-    return data.id;
+    const mediaId: string = data.id;
+
+    // Fetch the real permalink (uses shortcode, not numeric ID)
+    try {
+      const meta = await this.callInstagramApi(
+        `${this.apiUrl}/${mediaId}`,
+        new URLSearchParams({ fields: 'permalink', access_token: accessToken }),
+        'fetchPermalink',
+        'GET',
+      );
+      return { id: mediaId, permalink: meta.permalink };
+    } catch {
+      this.logger.warn(`Could not fetch permalink for media ${mediaId}`);
+      return { id: mediaId };
+    }
   }
 
   /**
