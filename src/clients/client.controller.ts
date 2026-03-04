@@ -1,17 +1,18 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
-  Param,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { SaveLogoDto } from './dto/save-logo.dto';
 import { GetUser } from '../decorators/get-user.decorator';
 import { SkipClientValidation } from '../decorators/skip-client-validation.decorator';
 import { User } from '@prisma/client';
@@ -50,5 +51,20 @@ export class ClientController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@GetUser() user: User, @Param('id') id: string) {
     await this.clientService.deleteClient(id, user.id);
+  }
+
+  @Post(':id/logo')
+  async saveLogo(
+    @GetUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: SaveLogoDto,
+  ) {
+    return this.clientService.saveLogo(id, user.id, dto);
+  }
+
+  @Delete(':id/logo')
+  @HttpCode(HttpStatus.OK)
+  async deleteLogo(@GetUser() user: User, @Param('id') id: string) {
+    return this.clientService.deleteLogo(id, user.id);
   }
 }

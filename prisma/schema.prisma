@@ -1,41 +1,38 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // You can change this to "mysql", "sqlite", etc.
+  provider = "postgresql"
 }
 
 model User {
-  id          String   @id @default(cuid())
-  auth0UserId String   @unique
-  email       String   @unique
-  name        String?
-  avatar      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  clients        Client[]
-  contents       Content[]
-  socialAccounts SocialAccount[]
-  oauthStates    OAuthState[]
+  id             String          @id @default(cuid())
+  auth0UserId    String          @unique
+  email          String          @unique
+  name           String?
+  avatar         String?
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
   calendars      Calendar[]
+  clients        Client[]
   comments       Comment[]
+  contents       Content[]
+  oauthStates    OAuthState[]
+  socialAccounts SocialAccount[]
 }
 
 model Client {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String   @db.VarChar(100)
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  userId         String
+  name           String          @db.VarChar(100)
+  avatar         String?
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
+  logoUrl   String?
+  logoKey   String?
   calendars      Calendar[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   contents       Content[]
   socialAccounts SocialAccount[]
 
@@ -44,143 +41,216 @@ model Client {
 }
 
 model SocialAccount {
-  id             String    @id @default(cuid())
-  userId         String
-  clientId       String
-  platform       Platform
-  accessToken    String? // Deberías encriptar esto en la aplicación
-  refreshToken   String? // Para renovar el accessToken
-  expiresAt        DateTime?
-  refreshExpiresAt DateTime? // Expiry of the refresh token itself
-  platformUserId   String? // ID del usuario en la plataforma (ej: Instagram User ID)
-  username       String? // Nombre de usuario en la plataforma
-  metadata       Json? // Para datos adicionales específicos de cada plataforma
-  isActive       Boolean  @default(true)
-  disconnectedAt DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  publications Publication[]
+  id               String        @id @default(cuid())
+  userId           String
+  clientId         String
+  platform         Platform
+  accessToken      String?
+  refreshToken     String?
+  expiresAt        DateTime?     @db.Timestamptz(3)
+  platformUserId   String?
+  username         String?
+  metadata         Json?
+  isActive         Boolean       @default(true)
+  disconnectedAt   DateTime?     @db.Timestamptz(3)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  refreshExpiresAt DateTime?     @db.Timestamptz(6)
+  publications     Publication[]
+  client           Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clientId, platform, platformUserId])
   @@index([userId])
   @@index([clientId])
   @@index([platform])
   @@index([disconnectedAt])
-  // Composite: getAllSocialAccounts WHERE userId AND clientId (most common filter)
-  @@index([userId, isActive])
 }
 
 model Content {
-  id         String   @id @default(cuid())
-  userId     String
-  clientId   String
-  calendarId String?  // nullable for migration; required long-term
-  caption    String?  // The actual post text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String        @id @default(cuid())
+  userId       String
+  clientId     String
+  calendarId   String?
+  caption      String?
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  calendar     Calendar?     @relation(fields: [calendarId], references: [id])
   client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  calendar     Calendar?     @relation(fields: [calendarId], references: [id], onDelete: SetNull)
-  publications Publication[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   media        Media[]
+  publications Publication[]
 
   @@index([userId])
   @@index([clientId])
   @@index([calendarId])
-  // Composite: listContent WHERE clientId ORDER BY createdAt
-  @@index([clientId, createdAt])
 }
 
-
 model Publication {
-  id              String            @id @default(cuid())
+  id              String             @id @default(cuid())
   contentId       String
   socialAccountId String
-  platform        Platform          // INSTAGRAM, LINKEDIN, FACEBOOK, etc.
-  format          ContentFormat     // FEED, STORY, REEL, VIDEO
-  publishAt       DateTime
-  status          PublicationStatus @default(SCHEDULED)
+  platform        Platform
+  format          ContentFormat
+  publishAt       DateTime           @db.Timestamptz(3)
+  status          PublicationStatus  @default(SCHEDULED)
   error           String?
-  customCaption   String?           // Platform-specific caption override
-  platformConfig  Json?             // Platform-specific settings
+  customCaption   String?
+  platformConfig  Json?
   platformId      String?
   link            String?
-  containerId     String?           // Pre-created container ID for two-phase publishing
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  content        Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  socialAccount  SocialAccount      @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
-  mediaUsage     PublicationMedia[]
-  comments       Comment[]
-  kanbanColumnId String?
-  kanbanOrder    Int                @default(0)
-  kanbanColumn   KanbanColumn?      @relation(fields: [kanbanColumnId], references: [id], onDelete: SetNull)
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(3)
+  kanbanColumnId  String?
+  kanbanOrder     Int                @default(0)
+  containerId     String?
+  comments        Comment[]
+  content         Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  kanbanColumn    KanbanColumn?      @relation(fields: [kanbanColumnId], references: [id])
+  socialAccount   SocialAccount      @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  mediaUsage      PublicationMedia[]
 
   @@index([publishAt])
   @@index([status])
   @@index([socialAccountId])
   @@index([contentId])
   @@index([kanbanColumnId])
-  // Composite: cron query WHERE status=SCHEDULED AND publishAt<=now ORDER BY publishAt
-  @@index([status, publishAt])
 }
 
 model Media {
-  id          String    @id @default(cuid())
-  contentId   String
-  url         String
-  key         String
-  type        MediaType
-  mimeType    String
-  size        Int
-  width       Int?
-  height      Int?
-  duration    Int?
-  thumbnail   String?
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
-  
-  content         Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  publicationUsage PublicationMedia[] // New relation!
-  
+  id               String             @id @default(cuid())
+  contentId        String
+  url              String
+  key              String
+  type             MediaType
+  mimeType         String
+  size             Int
+  width            Int?
+  height           Int?
+  duration         Int?
+  thumbnail        String?
+  order            Int                @default(0)
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  content          Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  publicationUsage PublicationMedia[]
+
   @@index([contentId])
   @@index([type])
 }
 
 model PublicationMedia {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   publicationId String
   mediaId       String
-  order         Int      @default(0) // Order for carousels
-  cropData      Json?    // Platform-specific crop/edit data
-  
-  publication Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  media       Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  
+  order         Int         @default(0)
+  cropData      Json?
+  media         Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
   @@unique([publicationId, mediaId])
   @@index([publicationId])
   @@index([mediaId])
 }
 
 model OAuthState {
-  id       String  @id @default(uuid())
-  state    String  @unique
-  provider String
-  userId   String
-  used     Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  state     String   @unique
+  provider  String
+  userId    String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([state])
   @@index([userId])
+}
+
+model Calendar {
+  id            String              @id @default(cuid())
+  userId        String
+  clientId      String
+  name          String
+  description   String?
+  createdAt     DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime            @updatedAt @db.Timestamptz(3)
+  client        Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareLinks    CalendarShareLink[]
+  comments      Comment[]
+  contents      Content[]
+  kanbanColumns KanbanColumn[]
+
+  @@index([userId])
+  @@index([clientId])
+}
+
+model KanbanColumn {
+  id           String        @id @default(cuid())
+  calendarId   String
+  name         String
+  order        Int           @default(0)
+  mappedStatus String?
+  color        String?
+  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(6)
+  calendar     Calendar      @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  publications Publication[]
+
+  @@index([calendarId])
+  @@index([calendarId, order])
+}
+
+model CalendarShareLink {
+  id             String          @id @default(cuid())
+  calendarId     String
+  tokenHash      String          @unique
+  label          String?
+  permission     SharePermission @default(VIEW_AND_COMMENT)
+  isActive       Boolean         @default(true)
+  expiresAt      DateTime?       @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  revokedAt      DateTime?       @db.Timestamptz(3)
+  lastAccessedAt DateTime?       @db.Timestamptz(3)
+  accessCount    Int             @default(0)
+  calendar       Calendar        @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  comments       Comment[]
+
+  @@index([calendarId])
+  @@index([tokenHash])
+}
+
+model Comment {
+  id            String             @id @default(cuid())
+  calendarId    String
+  publicationId String?
+  authorName    String
+  authorEmail   String?
+  body          String
+  shareLinkId   String?
+  userId        String?
+  commenterId   String?
+  isResolved    Boolean            @default(false)
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @db.Timestamptz(3)
+  calendar      Calendar           @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  publication   Publication?       @relation(fields: [publicationId], references: [id])
+  shareLink     CalendarShareLink? @relation(fields: [shareLinkId], references: [id])
+  user          User?              @relation(fields: [userId], references: [id])
+
+  @@index([calendarId])
+  @@index([publicationId])
+  @@index([shareLinkId])
+  @@index([commenterId])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("waitlist_entries")
 }
 
 enum ContentFormat {
@@ -189,8 +259,8 @@ enum ContentFormat {
   REEL
   VIDEO
   CAROUSEL
-  ARTICLE      // For LinkedIn
-  TWEET        // For X
+  ARTICLE
+  TWEET
 }
 
 enum PublicationStatus {
@@ -219,99 +289,4 @@ enum MediaType {
 enum SharePermission {
   VIEW_ONLY
   VIEW_AND_COMMENT
-}
-
-model Calendar {
-  id          String   @id @default(cuid())
-  userId      String
-  clientId    String
-  name        String   // e.g. "Acme Corp - Q1 2026"
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client        Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  contents      Content[]
-  shareLinks    CalendarShareLink[]
-  comments      Comment[]
-  kanbanColumns KanbanColumn[]
-
-  @@index([userId])
-  @@index([clientId])
-  // Composite: listCalendars WHERE clientId ORDER BY createdAt
-  @@index([clientId, createdAt])
-}
-
-model KanbanColumn {
-  id           String   @id @default(cuid())
-  calendarId   String
-  name         String
-  order        Int      @default(0)
-  mappedStatus String?
-  color        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  calendar     Calendar      @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  publications Publication[]
-
-  @@index([calendarId])
-  @@index([calendarId, order])
-}
-
-model CalendarShareLink {
-  id             String          @id @default(cuid())
-  calendarId     String
-  tokenHash      String          @unique // SHA-256 hash of the raw token
-  label          String?         // human-readable name e.g. "For client review"
-  permission     SharePermission @default(VIEW_AND_COMMENT)
-  isActive       Boolean         @default(true)
-  expiresAt      DateTime?       // null = never expires
-  createdAt      DateTime        @default(now())
-  revokedAt      DateTime?
-  lastAccessedAt DateTime?
-  accessCount    Int             @default(0)
-
-  calendar Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  comments Comment[]
-
-  @@index([calendarId])
-  @@index([tokenHash])
-}
-
-model Comment {
-  id            String   @id @default(cuid())
-  calendarId    String
-  publicationId String?  // optional: comment on a specific publication
-  authorName    String   // required display name from client
-  authorEmail   String?  // optional, for future notifications
-  body          String
-  shareLinkId   String?  // which link was used (null = manager comment)
-  userId        String?  // null for external commenters
-  commenterId   String?  // browser session ID for edit/delete ownership
-  isResolved    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  calendar    Calendar           @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  publication Publication?       @relation(fields: [publicationId], references: [id], onDelete: SetNull)
-  shareLink   CalendarShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
-  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([calendarId])
-  @@index([publicationId])
-  @@index([shareLinkId])
-  @@index([commenterId])
-  // Composite: paginated comment list for public share (filter + sort)
-  @@index([calendarId, isResolved, createdAt])
-}
-
-model WaitlistEntry {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("waitlist_entries")
 }

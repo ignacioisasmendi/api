@@ -9,3 +9,4 @@ import { PrismaService } from '../prisma/prisma.service';
   exports: [ClientService],
 })
 export class ClientModule {}
+

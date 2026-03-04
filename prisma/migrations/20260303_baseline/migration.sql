@@ -1,8 +1,11 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "ContentFormat" AS ENUM ('FEED', 'STORY', 'REEL', 'VIDEO', 'CAROUSEL', 'ARTICLE', 'TWEET');
 
 -- CreateEnum
-CREATE TYPE "PublicationStatus" AS ENUM ('SCHEDULED', 'PUBLISHING', 'PUBLISHED', 'ERROR');
+CREATE TYPE "PublicationStatus" AS ENUM ('SCHEDULED', 'PREPARING', 'READY', 'PUBLISHING', 'PUBLISHED', 'ERROR');
 
 -- CreateEnum
 CREATE TYPE "Platform" AS ENUM ('INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'LINKEDIN', 'X');
@@ -20,8 +23,8 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "name" TEXT,
     "avatar" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -32,8 +35,8 @@ CREATE TABLE "Client" (
     "userId" TEXT NOT NULL,
     "name" VARCHAR(100) NOT NULL,
     "avatar" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "Client_pkey" PRIMARY KEY ("id")
 );
@@ -46,14 +49,15 @@ CREATE TABLE "SocialAccount" (
     "platform" "Platform" NOT NULL,
     "accessToken" TEXT,
     "refreshToken" TEXT,
-    "expiresAt" TIMESTAMP(3),
+    "expiresAt" TIMESTAMPTZ(3),
     "platformUserId" TEXT,
     "username" TEXT,
     "metadata" JSONB,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "disconnectedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "disconnectedAt" TIMESTAMPTZ(3),
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+    "refreshExpiresAt" TIMESTAMPTZ(6),
 
     CONSTRAINT "SocialAccount_pkey" PRIMARY KEY ("id")
 );
@@ -65,8 +69,8 @@ CREATE TABLE "Content" (
     "clientId" TEXT NOT NULL,
     "calendarId" TEXT,
     "caption" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "Content_pkey" PRIMARY KEY ("id")
 );
@@ -78,15 +82,18 @@ CREATE TABLE "Publication" (
     "socialAccountId" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "format" "ContentFormat" NOT NULL,
-    "publishAt" TIMESTAMP(3) NOT NULL,
+    "publishAt" TIMESTAMPTZ(3) NOT NULL,
     "status" "PublicationStatus" NOT NULL DEFAULT 'SCHEDULED',
     "error" TEXT,
     "customCaption" TEXT,
     "platformConfig" JSONB,
     "platformId" TEXT,
     "link" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+    "kanbanColumnId" TEXT,
+    "kanbanOrder" INTEGER NOT NULL DEFAULT 0,
+    "containerId" TEXT,
 
     CONSTRAINT "Publication_pkey" PRIMARY KEY ("id")
 );
@@ -105,7 +112,7 @@ CREATE TABLE "Media" (
     "duration" INTEGER,
     "thumbnail" TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Media_pkey" PRIMARY KEY ("id")
 );
@@ -128,8 +135,8 @@ CREATE TABLE "OAuthState" (
     "provider" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "used" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "OAuthState_pkey" PRIMARY KEY ("id")
 );
@@ -141,10 +148,24 @@ CREATE TABLE "Calendar" (
     "clientId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "Calendar_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "KanbanColumn" (
+    "id" TEXT NOT NULL,
+    "calendarId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "mappedStatus" TEXT,
+    "color" TEXT,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "KanbanColumn_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -155,10 +176,10 @@ CREATE TABLE "CalendarShareLink" (
     "label" TEXT,
     "permission" "SharePermission" NOT NULL DEFAULT 'VIEW_AND_COMMENT',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "expiresAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "revokedAt" TIMESTAMP(3),
-    "lastAccessedAt" TIMESTAMP(3),
+    "expiresAt" TIMESTAMPTZ(3),
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "revokedAt" TIMESTAMPTZ(3),
+    "lastAccessedAt" TIMESTAMPTZ(3),
     "accessCount" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "CalendarShareLink_pkey" PRIMARY KEY ("id")
@@ -176,8 +197,8 @@ CREATE TABLE "Comment" (
     "userId" TEXT,
     "commenterId" TEXT,
     "isResolved" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
 );
@@ -186,8 +207,8 @@ CREATE TABLE "Comment" (
 CREATE TABLE "waitlist_entries" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "waitlist_entries_pkey" PRIMARY KEY ("id")
 );
@@ -241,6 +262,9 @@ CREATE INDEX "Publication_socialAccountId_idx" ON "Publication"("socialAccountId
 CREATE INDEX "Publication_contentId_idx" ON "Publication"("contentId");
 
 -- CreateIndex
+CREATE INDEX "Publication_kanbanColumnId_idx" ON "Publication"("kanbanColumnId");
+
+-- CreateIndex
 CREATE INDEX "Media_contentId_idx" ON "Media"("contentId");
 
 -- CreateIndex
@@ -271,6 +295,12 @@ CREATE INDEX "Calendar_userId_idx" ON "Calendar"("userId");
 CREATE INDEX "Calendar_clientId_idx" ON "Calendar"("clientId");
 
 -- CreateIndex
+CREATE INDEX "KanbanColumn_calendarId_idx" ON "KanbanColumn"("calendarId");
+
+-- CreateIndex
+CREATE INDEX "KanbanColumn_calendarId_order_idx" ON "KanbanColumn"("calendarId", "order");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "CalendarShareLink_tokenHash_key" ON "CalendarShareLink"("tokenHash");
 
 -- CreateIndex
@@ -298,22 +328,25 @@ CREATE UNIQUE INDEX "waitlist_entries_email_key" ON "waitlist_entries"("email");
 ALTER TABLE "Client" ADD CONSTRAINT "Client_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "SocialAccount" ADD CONSTRAINT "SocialAccount_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "SocialAccount" ADD CONSTRAINT "SocialAccount_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Content" ADD CONSTRAINT "Content_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Content" ADD CONSTRAINT "Content_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SocialAccount" ADD CONSTRAINT "SocialAccount_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Content" ADD CONSTRAINT "Content_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Content" ADD CONSTRAINT "Content_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Content" ADD CONSTRAINT "Content_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Publication" ADD CONSTRAINT "Publication_contentId_fkey" FOREIGN KEY ("contentId") REFERENCES "Content"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Publication" ADD CONSTRAINT "Publication_kanbanColumnId_fkey" FOREIGN KEY ("kanbanColumnId") REFERENCES "KanbanColumn"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Publication" ADD CONSTRAINT "Publication_socialAccountId_fkey" FOREIGN KEY ("socialAccountId") REFERENCES "SocialAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -322,19 +355,22 @@ ALTER TABLE "Publication" ADD CONSTRAINT "Publication_socialAccountId_fkey" FORE
 ALTER TABLE "Media" ADD CONSTRAINT "Media_contentId_fkey" FOREIGN KEY ("contentId") REFERENCES "Content"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PublicationMedia" ADD CONSTRAINT "PublicationMedia_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES "Publication"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PublicationMedia" ADD CONSTRAINT "PublicationMedia_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "Media"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PublicationMedia" ADD CONSTRAINT "PublicationMedia_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "Media"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PublicationMedia" ADD CONSTRAINT "PublicationMedia_publicationId_fkey" FOREIGN KEY ("publicationId") REFERENCES "Publication"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OAuthState" ADD CONSTRAINT "OAuthState_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Calendar" ADD CONSTRAINT "Calendar_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "KanbanColumn" ADD CONSTRAINT "KanbanColumn_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CalendarShareLink" ADD CONSTRAINT "CalendarShareLink_calendarId_fkey" FOREIGN KEY ("calendarId") REFERENCES "Calendar"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -350,3 +386,4 @@ ALTER TABLE "Comment" ADD CONSTRAINT "Comment_shareLinkId_fkey" FOREIGN KEY ("sh
 
 -- AddForeignKey
 ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
