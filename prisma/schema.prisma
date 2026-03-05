@@ -32,6 +32,7 @@ model Client {
   logoUrl   String?
   logoKey   String?
   calendars      Calendar[]
+  campaigns      Campaign[]
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   contents       Content[]
   socialAccounts SocialAccount[]
@@ -86,10 +87,27 @@ model Content {
   @@index([calendarId])
 }
 
+model Campaign {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  startDate    DateTime?     @db.Timestamptz(3)
+  endDate      DateTime?     @db.Timestamptz(3)
+  color        String?
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  publications Publication[]
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+
+  @@index([clientId])
+}
+
 model Publication {
   id              String             @id @default(cuid())
   contentId       String
   socialAccountId String
+  campaignId      String?
   platform        Platform
   format          ContentFormat
   publishAt       DateTime           @db.Timestamptz(3)
@@ -104,6 +122,7 @@ model Publication {
   kanbanColumnId  String?
   kanbanOrder     Int                @default(0)
   containerId     String?
+  campaign        Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   comments        Comment[]
   content         Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
   kanbanColumn    KanbanColumn?      @relation(fields: [kanbanColumnId], references: [id])
@@ -115,6 +134,7 @@ model Publication {
   @@index([socialAccountId])
   @@index([contentId])
   @@index([kanbanColumnId])
+  @@index([campaignId])
 }
 
 model Media {

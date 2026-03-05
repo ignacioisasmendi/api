@@ -32,6 +32,10 @@ export class CreatePublicationDto {
   @IsNotEmpty()
   socialAccountId: string;
 
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
   @IsEnum(ContentFormat)
   @IsNotEmpty()
   format: ContentFormat;
@@ -102,6 +106,10 @@ export class UpdatePublicationDto {
   @IsString()
   @IsOptional()
   customCaption?: string;
+
+  @IsOptional()
+  @IsString()
+  campaignId?: string | null;
 
   @IsObject()
   @IsOptional()

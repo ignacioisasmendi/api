@@ -38,10 +38,14 @@ const PUBLICATION_SELECT = {
   containerId: true,
   contentId: true,
   socialAccountId: true,
+  campaignId: true,
   kanbanColumnId: true,
   kanbanOrder: true,
   createdAt: true,
   updatedAt: true,
+  campaign: {
+    select: { id: true, name: true, color: true },
+  },
   content: {
     select: {
       id: true,
@@ -82,7 +86,7 @@ export class PublicationService {
 
   async createPublication(dto: CreatePublicationDto, clientId: string) {
     // Parallel validation — avoids two sequential round-trips to the DB
-    const [content, socialAccount] = await Promise.all([
+    const [content, socialAccount, campaign] = await Promise.all([
       this.prisma.content.findFirst({
         where: { id: dto.contentId, clientId },
         include: { media: true },
@@ -90,6 +94,11 @@ export class PublicationService {
       this.prisma.socialAccount.findFirst({
         where: { id: dto.socialAccountId, clientId, isActive: true },
       }),
+      dto.campaignId
+        ? this.prisma.campaign.findFirst({
+            where: { id: dto.campaignId, clientId },
+          })
+        : Promise.resolve(null),
     ]);
 
     if (!content) {
@@ -100,6 +109,12 @@ export class PublicationService {
 
     if (!socialAccount) {
       throw new BadRequestException('Social account not found or not active');
+    }
+
+    if (dto.campaignId && !campaign) {
+      throw new BadRequestException(
+        'Campaign not found or does not belong to this client',
+      );
     }
 
     // Verify all media IDs belong to this content
@@ -116,6 +131,7 @@ export class PublicationService {
       data: {
         contentId: dto.contentId,
         socialAccountId: dto.socialAccountId,
+        campaignId: dto.campaignId ?? null,
         platform: socialAccount.platform,
         format: dto.format,
         publishAt: new Date(dto.publishAt),
@@ -221,6 +237,9 @@ export class PublicationService {
       }),
       ...(dto.platformConfig && { platformConfig: dto.platformConfig }),
       ...(dto.status && { status: dto.status }),
+      ...('campaignId' in dto && {
+        campaignId: dto.campaignId ?? null,
+      }),
     };
 
     // Handle media updates atomically
