@@ -14,11 +14,15 @@ export class IgOauthService {
     this.instagramAppSecret = configService.get('instagram.appSecret')!;
     this.instagramCallbackUrl = configService.get('instagram.callbackUrl')!;
 
-    this.logger.log('Instagram OAuth service initialized');
+    this.logger.log(`Instagram OAuth service initialized — callbackUrl: ${this.instagramCallbackUrl}`);
   }
 
   async exchangeCodeForToken(code: string) {
     try {
+      this.logger.log(
+        `Exchanging code for token — redirect_uri: "${this.instagramCallbackUrl}"`,
+      );
+
       const form = new URLSearchParams({
         client_id: this.instagramAppId,
         client_secret: this.instagramAppSecret,
@@ -35,7 +39,9 @@ export class IgOauthService {
 
       return data;
     } catch (error) {
-      this.logger.error('Instagram token exchange failed');
+      this.logger.error(
+        `Instagram token exchange failed — redirect_uri used: "${this.instagramCallbackUrl}"`,
+      );
 
       if (axios.isAxiosError(error)) {
         this.logger.error(`Status: ${error.response?.status}`);
