@@ -19,9 +19,21 @@ export class IgOauthService {
 
   async exchangeCodeForToken(code: string) {
     try {
-      this.logger.log(
-        `Exchanging code for token — redirect_uri: "${this.instagramCallbackUrl}"`,
-      );
+      this.logger.log('========== INSTAGRAM TOKEN EXCHANGE DEBUG START ==========');
+      this.logger.log(`redirect_uri value: "${this.instagramCallbackUrl}"`);
+      this.logger.log(`redirect_uri type: ${typeof this.instagramCallbackUrl}`);
+      this.logger.log(`redirect_uri length: ${this.instagramCallbackUrl?.length}`);
+      this.logger.log(`redirect_uri trimmed: "${this.instagramCallbackUrl?.trim()}"`);
+      this.logger.log(`redirect_uri charCodes: [${Array.from(this.instagramCallbackUrl || '').map(c => c.charCodeAt(0)).join(', ')}]`);
+      this.logger.log(`client_id value: "${this.instagramAppId}"`);
+      this.logger.log(`client_id type: ${typeof this.instagramAppId}`);
+      this.logger.log(`code value: "${code}"`);
+      this.logger.log(`code length: ${code?.length}`);
+      this.logger.log(`ENV raw INSTAGRAM_CALLBACK_URL: "${process.env.INSTAGRAM_CALLBACK_URL}"`);
+      this.logger.log(`ENV raw type: ${typeof process.env.INSTAGRAM_CALLBACK_URL}`);
+      this.logger.log(`ConfigService value: "${this.configService.get('instagram.callbackUrl')}"`);
+      this.logger.log(`Expected: "https://app.planer.com.ar/auth/instagram/callback"`);
+      this.logger.log(`Match? ${this.instagramCallbackUrl === 'https://app.planer.com.ar/auth/instagram/callback'}`);
 
       const form = new URLSearchParams({
         client_id: this.instagramAppId,
@@ -31,21 +43,27 @@ export class IgOauthService {
         code,
       });
 
+      this.logger.log(`Full form body: ${form.toString()}`);
+      this.logger.log('========== SENDING REQUEST TO INSTAGRAM ==========');
+
       const { data } = await axios.post(
         'https://api.instagram.com/oauth/access_token',
         form.toString(),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
       );
 
+      this.logger.log('========== INSTAGRAM TOKEN EXCHANGE SUCCESS ==========');
       return data;
     } catch (error) {
-      this.logger.error(
-        `Instagram token exchange failed — redirect_uri used: "${this.instagramCallbackUrl}"`,
-      );
+      this.logger.error('========== INSTAGRAM TOKEN EXCHANGE FAILED ==========');
+      this.logger.error(`redirect_uri used: "${this.instagramCallbackUrl}"`);
+      this.logger.error(`ENV raw INSTAGRAM_CALLBACK_URL: "${process.env.INSTAGRAM_CALLBACK_URL}"`);
 
       if (axios.isAxiosError(error)) {
-        this.logger.error(`Status: ${error.response?.status}`);
-        this.logger.error(`Data: ${JSON.stringify(error.response?.data)}`);
+        this.logger.error(`HTTP Status: ${error.response?.status}`);
+        this.logger.error(`Response data: ${JSON.stringify(error.response?.data, null, 2)}`);
+        this.logger.error(`Request URL: ${error.config?.url}`);
+        this.logger.error(`Request body: ${error.config?.data}`);
         throw new Error(
           `Instagram OAuth failed: ${error.response?.data?.error_message || error.message}`,
         );
