@@ -4,6 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { TkOauthCallbackDto } from './dto/tk-oauth-callback.dto';
+import { EncryptionService } from 'src/shared/encryption/encryption.service';
 
 @Controller('/auth/tiktok')
 export class TkOauthController {
@@ -11,6 +12,7 @@ export class TkOauthController {
   constructor(
     private readonly tkOauthService: TkOauthService,
     private readonly prismaService: PrismaService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   @Post('callback')
@@ -29,6 +31,12 @@ export class TkOauthController {
 
     this.logger.log(tokenData);
     // 3. Crear o reactivar la cuenta social asociada al usuario y client actual
+    const encryptedAccessToken = this.encryptionService.encrypt(
+      tokenData.access_token,
+    );
+    const encryptedRefreshToken = this.encryptionService.encrypt(
+      tokenData.refresh_token,
+    );
     await this.prismaService.socialAccount.upsert({
       where: {
         clientId_platform_platformUserId: {
@@ -41,8 +49,8 @@ export class TkOauthController {
         userId: user.id,
         clientId,
         platform: 'TIKTOK',
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         platformUserId: tokenData.open_id,
         username: tiktokUser.display_name,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
@@ -51,8 +59,8 @@ export class TkOauthController {
         ),
       },
       update: {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         username: tiktokUser.display_name,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
         refreshExpiresAt: new Date(

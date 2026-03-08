@@ -9,6 +9,7 @@ import {
   PrepareResult,
   PublishResult,
 } from './interfaces/platform-publisher.interface';
+import { EncryptionService } from '../shared/encryption/encryption.service';
 
 @Injectable()
 export class InstagramPublisher implements IPlatformPublisher {
@@ -19,13 +20,22 @@ export class InstagramPublisher implements IPlatformPublisher {
   private readonly mediaProcessingWaitTime: number;
   private readonly videoProcessingWaitTime: number;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private readonly encryptionService: EncryptionService,
+  ) {
     this.apiUrl = this.configService.get<string>('instagram.apiUrl')!;
     this.mediaProcessingWaitTime = this.configService.get<number>(
       'instagram.mediaProcessingWaitTime',
     )!;
     this.videoProcessingWaitTime = this.configService.get<number>(
       'instagram.videoProcessingWaitTime',
+    )!;
+  }
+
+  private plainToken(publication: PublicationWithRelations): string {
+    return this.encryptionService.decrypt(
+      publication.socialAccount.accessToken,
     )!;
   }
 
@@ -121,7 +131,7 @@ export class InstagramPublisher implements IPlatformPublisher {
         const { id: publishedMediaId, permalink } = await this.publishMedia(
           publication.containerId,
           socialAccount.platformUserId!,
-          socialAccount.accessToken!,
+          this.plainToken(publication),
         );
 
         return {
@@ -171,7 +181,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       const { id: publishedMediaId, permalink } = await this.publishMedia(
         containerId,
         socialAccount.platformUserId!,
-        socialAccount.accessToken!,
+        this.plainToken(publication),
       );
 
       return {
@@ -211,7 +221,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       publication.customCaption || publication.content.caption || '';
 
     const isVideo = media.type === 'VIDEO';
-    const params = new URLSearchParams({ caption, access_token: socialAccount.accessToken! });
+    const params = new URLSearchParams({ caption, access_token: this.plainToken(publication) });
     if (isVideo) {
       // Instagram deprecated standalone video feed posts — videos must use the Reels
       // container with share_to_feed: true to appear in the feed.
@@ -233,7 +243,7 @@ export class InstagramPublisher implements IPlatformPublisher {
     const processingWait = isVideo ? this.videoProcessingWaitTime : this.mediaProcessingWaitTime;
     await this.waitForMediaProcessing(
       data.id,
-      socialAccount.accessToken!,
+      this.plainToken(publication),
       processingWait,
     );
 
@@ -256,7 +266,7 @@ export class InstagramPublisher implements IPlatformPublisher {
     const params = new URLSearchParams({
       image_url: media.url,
       media_type: 'STORIES',
-      access_token: socialAccount.accessToken!,
+      access_token: this.plainToken(publication),
     });
     if (link) params.append('link', link);
 
@@ -268,7 +278,7 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     await this.waitForMediaProcessing(
       data.id,
-      socialAccount.accessToken!,
+      this.plainToken(publication),
       this.mediaProcessingWaitTime,
     );
 
@@ -292,7 +302,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       video_url: media.url,
       caption,
       media_type: 'REELS',
-      access_token: socialAccount.accessToken!,
+      access_token: this.plainToken(publication),
       upload_type: 'resumable',
       share_to_feed: 'true',
     });
@@ -305,7 +315,7 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     await this.waitForMediaProcessing(
       data.id,
-      socialAccount.accessToken!,
+      this.plainToken(publication),
       this.videoProcessingWaitTime,
     );
 
@@ -409,7 +419,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       mediaItems.map(async (item, index) => {
         const params = new URLSearchParams({
           is_carousel_item: 'true',
-          access_token: socialAccount.accessToken!,
+          access_token: this.plainToken(publication),
         });
 
         const isVideo = item.media.type === 'VIDEO';
@@ -433,7 +443,7 @@ export class InstagramPublisher implements IPlatformPublisher {
 
         await this.waitForMediaProcessing(
           data.id,
-          socialAccount.accessToken!,
+          this.plainToken(publication),
           timeout,
         );
 
@@ -447,14 +457,14 @@ export class InstagramPublisher implements IPlatformPublisher {
         media_type: 'CAROUSEL',
         caption,
         children: mediaIds.join(','),
-        access_token: socialAccount.accessToken!,
+        access_token: this.plainToken(publication),
       }),
       'createCarouselContainer',
     );
 
     await this.waitForMediaProcessing(
       carouselData.id,
-      socialAccount.accessToken!,
+      this.plainToken(publication),
       this.mediaProcessingWaitTime,
     );
 

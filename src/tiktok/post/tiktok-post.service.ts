@@ -22,6 +22,7 @@ import {
 } from '../tiktok.types';
 import { InitDirectPostDto } from './dto/init-direct-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EncryptionService } from '../../shared/encryption/encryption.service';
 
 /**
  * Service responsible for:
@@ -48,6 +49,7 @@ export class TiktokPostService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly prismaService: PrismaService,
+    private readonly encryptionService: EncryptionService,
   ) {
     this.apiUrl = this.configService.get<string>('tiktok.apiUrl')!;
     this.clientKey = this.configService.get<string>('tiktok.clientKey')!;
@@ -335,8 +337,8 @@ export class TiktokPostService {
     await this.prismaService.socialAccount.update({
       where: { id: socialAccountId },
       data: {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
+        accessToken: this.encryptionService.encrypt(data.access_token),
+        refreshToken: this.encryptionService.encrypt(data.refresh_token),
         expiresAt: new Date(Date.now() + data.expires_in * 1000),
       },
     });

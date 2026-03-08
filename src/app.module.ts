@@ -15,6 +15,7 @@ import { Auth0Guard } from './auth/auth0.guard';
 import { IgOauthModule } from './oauth/instagram/ig-oauth/ig-oauth.module';
 import { TkOauthModule } from './oauth/tiktok/tk-oauth/tk-oauth.module';
 import { StorageModule } from './shared/storage/storage.module';
+import { EncryptionModule } from './shared/encryption/encryption.module';
 import { TiktokModule } from './tiktok/tiktok.module';
 import { CalendarModule } from './calendars/calendar.module';
 import { KanbanColumnModule } from './kanban-columns/kanban-column.module';
@@ -78,6 +79,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     IgOauthModule,
     TkOauthModule,
     StorageModule,
+    EncryptionModule,
     TiktokModule,
     CalendarModule,
     KanbanColumnModule,

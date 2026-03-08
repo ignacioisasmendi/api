@@ -11,6 +11,7 @@ import { Platform } from '@prisma/client';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { InsightsPeriod } from './dto/account-insights-query.dto';
+import { EncryptionService } from '../shared/encryption/encryption.service';
 
 // ─── Response types ────────────────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ export class InstagramInsightsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly encryptionService: EncryptionService,
   ) {
     this.apiUrl =
       this.configService.get<string>('instagram.apiUrl') ||
@@ -136,6 +138,8 @@ export class InstagramInsightsService {
       );
     }
 
+    const plainToken = this.encryptionService.decrypt(account.accessToken)!;
+
     const twentyFourHoursFromNow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const isNearExpiry =
       account.expiresAt && account.expiresAt <= twentyFourHoursFromNow;
@@ -144,15 +148,12 @@ export class InstagramInsightsService {
       this.logger.log(
         `Token for account ${accountId} is near expiry, refreshing`,
       );
-      const refreshed = await this.refreshToken(
-        account.id,
-        account.accessToken,
-      );
+      const refreshed = await this.refreshToken(account.id, plainToken);
       return { token: refreshed, platformUserId: account.platformUserId };
     }
 
     return {
-      token: account.accessToken,
+      token: plainToken,
       platformUserId: account.platformUserId,
     };
   }
@@ -183,7 +184,10 @@ export class InstagramInsightsService {
 
       await this.prisma.socialAccount.update({
         where: { id: accountId },
-        data: { accessToken: access_token, expiresAt: newExpiresAt },
+        data: {
+          accessToken: this.encryptionService.encrypt(access_token),
+          expiresAt: newExpiresAt,
+        },
       });
 
       this.logger.log(`Token refreshed for account ${accountId}`);

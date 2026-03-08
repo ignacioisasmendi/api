@@ -20,6 +20,14 @@ export class ConfigValidationService implements OnModuleInit {
       errors.push('DATABASE_URL is required');
     }
 
+    // Validate token encryption key
+    const tokenKey = this.configService.get<string>('encryption.tokenKey');
+    if (!tokenKey || !/^[0-9a-fA-F]{64}$/.test(tokenKey)) {
+      errors.push(
+        'TOKEN_ENCRYPTION_KEY must be set to exactly 64 hex characters (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"',
+      );
+    }
+
     // Validate Instagram config (if Instagram is enabled)
     const instagramAccountId = this.configService.get('instagram.accountId');
     const instagramAccessToken = this.configService.get(

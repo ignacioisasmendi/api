@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { TkOauthService } from '../oauth/tiktok/tk-oauth/tk-oauth.service';
+import { EncryptionService } from '../shared/encryption/encryption.service';
 
 const REFRESH_TOKEN_EXPIRED_ERRORS = new Set([
   'refresh_token_expired',
@@ -16,6 +17,7 @@ export class TkTokenRefreshCronService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tkOauthService: TkOauthService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   /**
@@ -63,7 +65,10 @@ export class TkTokenRefreshCronService {
     );
 
     for (const account of accounts) {
-      await this.refreshSingleAccount(account.id, account.refreshToken!);
+      const plainRefreshToken = this.encryptionService.decrypt(
+        account.refreshToken,
+      )!;
+      await this.refreshSingleAccount(account.id, plainRefreshToken);
     }
   }
 
@@ -79,8 +84,8 @@ export class TkTokenRefreshCronService {
       await this.prisma.socialAccount.update({
         where: { id: accountId },
         data: {
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
+          accessToken: this.encryptionService.encrypt(tokenData.access_token),
+          refreshToken: this.encryptionService.encrypt(tokenData.refresh_token),
           expiresAt: new Date(now.getTime() + tokenData.expires_in * 1000),
           refreshExpiresAt: new Date(
             now.getTime() + tokenData.refresh_expires_in * 1000,

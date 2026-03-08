@@ -9,6 +9,7 @@ import xConfig from './x.config';
 import cronConfig from './cron.config';
 import authConfig from './auth.config';
 import pexelsConfig from './pexels.config';
+import encryptionConfig from './encryption.config';
 import { ConfigValidationService } from './validation/config-validation.service';
 
 @Global()
@@ -28,6 +29,7 @@ import { ConfigValidationService } from './validation/config-validation.service'
         cronConfig,
         authConfig,
         pexelsConfig,
+        encryptionConfig,
       ],
     }),
   ],

@@ -6,12 +6,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { IgOauthCallbackDto } from './dto/ig-oauth-callback.dto';
+import { EncryptionService } from 'src/shared/encryption/encryption.service';
 
 @Controller('/auth/instagram')
 export class IgOauthController {
   constructor(
     private readonly igOauthService: IgOauthService,
     private readonly prismaService: PrismaService,
+    private readonly encryptionService: EncryptionService,
   ) {}
   /* 
   @Get('callback')
@@ -48,6 +50,9 @@ export class IgOauthController {
     const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
 
     // 5. Create or reactivate the social account
+    const encryptedToken = this.encryptionService.encrypt(
+      longLived.access_token,
+    );
     await this.prismaService.socialAccount.upsert({
       where: {
         clientId_platform_platformUserId: {
@@ -60,13 +65,13 @@ export class IgOauthController {
         userId: user.id,
         clientId,
         platform: 'INSTAGRAM',
-        accessToken: longLived.access_token,
+        accessToken: encryptedToken,
         platformUserId: instagramUser.id,
         username: instagramUser.username,
         expiresAt,
       },
       update: {
-        accessToken: longLived.access_token,
+        accessToken: encryptedToken,
         username: instagramUser.username,
         expiresAt,
         isActive: true,

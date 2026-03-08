@@ -17,6 +17,7 @@ import {
   TikTokSourceType,
 } from '../tiktok/tiktok.constants';
 import { isFileUploadInitData } from '../tiktok/tiktok.types';
+import { EncryptionService } from '../shared/encryption/encryption.service';
 
 @Injectable()
 export class TikTokPublisher implements IPlatformPublisher {
@@ -24,6 +25,7 @@ export class TikTokPublisher implements IPlatformPublisher {
 
   constructor(
     private readonly tiktokPostService: TiktokPostService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async validatePayload(
@@ -76,12 +78,18 @@ export class TikTokPublisher implements IPlatformPublisher {
 
     const videoMedia = mediaUsage[0].media;
     const caption = publication.customCaption || content.caption || '';
+    const accessToken = this.encryptionService.decrypt(
+      socialAccount.accessToken,
+    )!;
+    const refreshToken = this.encryptionService.decrypt(
+      socialAccount.refreshToken,
+    )!;
 
     // Use auto-retry wrapper to handle token expiration
     return await this.tiktokPostService.executeWithTokenRefresh(
       socialAccount.id,
-      socialAccount.refreshToken,
-      socialAccount.accessToken,
+      refreshToken,
+      accessToken,
       async (accessToken: string) => {
         return await this.publishWithToken(
           accessToken,
