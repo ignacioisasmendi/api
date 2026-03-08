@@ -26,6 +26,7 @@ import { InstagramInsightsModule } from './instagram-insights/instagram-insights
 import { AnalyticsReportModule } from './analytics-report/analytics-report.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { EngagementModule } from './engagement/engagement.module';
+import { PexelsModule } from './pexels/pexels.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -88,6 +89,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     AnalyticsReportModule,
     CampaignsModule,
     EngagementModule,
+    PexelsModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
