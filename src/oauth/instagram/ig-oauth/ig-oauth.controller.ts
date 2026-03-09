@@ -69,6 +69,7 @@ export class IgOauthController {
         platformUserId: instagramUser.id,
         username: instagramUser.username,
         expiresAt,
+        metadata: { profilePictureUrl: instagramUser.profile_picture_url ?? null },
       },
       update: {
         accessToken: encryptedToken,
@@ -76,6 +77,7 @@ export class IgOauthController {
         expiresAt,
         isActive: true,
         disconnectedAt: null,
+        metadata: { profilePictureUrl: instagramUser.profile_picture_url ?? null },
       },
     });
 

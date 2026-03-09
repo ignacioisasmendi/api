@@ -103,7 +103,7 @@ export class IgOauthService {
   async getUserInfo(accessToken: string) {
     try {
       const response = await fetch(
-        `https://graph.instagram.com/me?fields=id,username&access_token=${accessToken}`,
+        `https://graph.instagram.com/me?fields=id,username,profile_picture_url&access_token=${accessToken}`,
       );
 
       if (!response.ok) {

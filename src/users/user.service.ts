@@ -214,18 +214,23 @@ export class UserService {
         disconnectedAt: true,
         createdAt: true,
         updatedAt: true,
+        metadata: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    return accounts.map((account) => ({
-      ...account,
-      isExpired: account.expiresAt
-        ? new Date(account.expiresAt) < new Date()
-        : false,
-      needsReauth:
-        !account.isActive ||
-        (account.expiresAt && new Date(account.expiresAt) < new Date()),
-    }));
+    return accounts.map((account) => {
+      const meta = account.metadata as { profilePictureUrl?: string } | null;
+      return {
+        ...account,
+        profilePictureUrl: meta?.profilePictureUrl ?? null,
+        isExpired: account.expiresAt
+          ? new Date(account.expiresAt) < new Date()
+          : false,
+        needsReauth:
+          !account.isActive ||
+          (account.expiresAt && new Date(account.expiresAt) < new Date()),
+      };
+    });
   }
 }
