@@ -22,6 +22,7 @@ import { UploadPublishBodyDto } from './dto/upload-publish-body.dto';
 import { TikTokSourceType } from './tiktok.constants';
 import { isFileUploadInitData } from './tiktok.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { EncryptionService } from '../shared/encryption/encryption.service';
 import * as fs from 'fs';
 import * as os from 'os';
 
@@ -44,6 +45,7 @@ export class TiktokController {
     private readonly tiktokCreatorService: TiktokCreatorService,
     private readonly tiktokPostService: TiktokPostService,
     private readonly prismaService: PrismaService,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   // ────────────────────────────────────────────────────────────────
@@ -70,10 +72,13 @@ export class TiktokController {
       clientId,
     );
 
+    const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
+    const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+
     const creatorInfo = await this.tiktokPostService.executeWithTokenRefresh(
       socialAccount.id,
-      socialAccount.refreshToken!,
-      socialAccount.accessToken!,
+      decryptedRefresh,
+      decryptedAccess,
       (token) => this.tiktokCreatorService.queryCreatorInfo(token),
     );
 
@@ -112,10 +117,13 @@ export class TiktokController {
       clientId,
     );
 
+    const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
+    const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+
     const initData = await this.tiktokPostService.executeWithTokenRefresh(
       socialAccount.id,
-      socialAccount.refreshToken!,
-      socialAccount.accessToken!,
+      decryptedRefresh,
+      decryptedAccess,
       (token) => this.tiktokPostService.initDirectPost(token, body),
     );
 
@@ -197,11 +205,15 @@ export class TiktokController {
       dto.source_type = TikTokSourceType.FILE_UPLOAD;
       dto.video_size = file.size;
 
+      // Decrypt tokens before use
+      const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
+      const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+
       // Execute with automatic token refresh
       const result = await this.tiktokPostService.executeWithTokenRefresh(
         socialAccount.id,
-        socialAccount.refreshToken!,
-        socialAccount.accessToken!,
+        decryptedRefresh,
+        decryptedAccess,
         async (token) => {
           // 1. Init the direct post
           const initData = await this.tiktokPostService.initDirectPost(
