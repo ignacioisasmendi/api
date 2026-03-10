@@ -74,10 +74,20 @@ Each feature follows: `module.ts`, `service.ts`, `controller.ts`, `dto/*.dto.ts`
 - `src/shared/storage/` — Cloudflare R2 presigned URLs (global module)
 - `src/oauth/instagram/`, `src/oauth/tiktok/` — OAuth callback flows
 - `src/public-share/` — public calendar view (no auth, `@IsPublic()`)
+- `src/analytics-report/` — POST `/analytics-report`, generates PDF with IG insights + charts → R2 signed URL
+- `src/instagram-insights/` — Instagram Insights API wrapper (exports `InstagramInsightsService`)
+- `src/engagement/` — engagement tracking
+- `src/kanban-columns/` — kanban board column management
+- `src/campaigns/` — campaign management
+- `src/pexels/` — Pexels stock media search
+
+### Global prefix
+
+The `/v1` global prefix is **commented out** in `src/main.ts`. All routes have **no prefix**.
 
 ### Configuration
 
-Namespaced configs in `src/config/`: `app`, `auth`, `database`, `instagram`, `tiktok`, `cron`. Access via `configService.get<T>('namespace.key')`. CORS origins are comma-separated in `CORS_ORIGINS` env.
+Namespaced configs in `src/config/`: `app`, `auth`, `database`, `instagram`, `tiktok`, `cron`, `encryption`, `facebook`, `pexels`, `x`. Access via `configService.get<T>('namespace.key')`. CORS origins are comma-separated in `CORS_ORIGINS` env.
 
 ## Code style
 
