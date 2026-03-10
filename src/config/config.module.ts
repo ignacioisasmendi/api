@@ -10,6 +10,7 @@ import cronConfig from './cron.config';
 import authConfig from './auth.config';
 import pexelsConfig from './pexels.config';
 import encryptionConfig from './encryption.config';
+import adminConfig from './admin.config';
 import { ConfigValidationService } from './validation/config-validation.service';
 
 @Global()
@@ -30,6 +31,7 @@ import { ConfigValidationService } from './validation/config-validation.service'
         authConfig,
         pexelsConfig,
         encryptionConfig,
+        adminConfig,
       ],
     }),
   ],

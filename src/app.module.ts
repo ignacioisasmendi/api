@@ -28,6 +28,7 @@ import { AnalyticsReportModule } from './analytics-report/analytics-report.modul
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { PexelsModule } from './pexels/pexels.module';
+import { AdminModule } from './admin/admin.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -92,6 +93,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     CampaignsModule,
     EngagementModule,
     PexelsModule,
+    AdminModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
