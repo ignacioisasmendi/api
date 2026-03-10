@@ -47,6 +47,27 @@ export interface MediaWithInsightsResponse {
   data: MediaItem[];
 }
 
+export interface IgProfileResponse {
+  followers: number;
+  following: number;
+  mediaCount: number;
+  username: string;
+  profilePictureUrl?: string;
+}
+
+export interface MediaListItem {
+  id: string;
+  caption: string;
+  mediaType: string;
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  timestamp: string;
+}
+
+export interface MediaListResponse {
+  data: MediaListItem[];
+}
+
 // ─── Internal types ────────────────────────────────────────────────────────────
 
 interface CacheEntry {
@@ -76,6 +97,7 @@ interface IgMediaApiItem {
   media_type: string;
   media_product_type?: string; // FEED | REEL | STORY | AD
   media_url?: string;
+  thumbnail_url?: string;
   timestamp: string;
 }
 
@@ -296,6 +318,87 @@ export class InstagramInsightsService {
 
     const { token } = await this.getValidToken(accountId, clientId);
     const result = await this.fetchMediaInsights(mediaId, token);
+
+    this.setCached(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Fetches the account's public profile stats (followers, following, post count).
+   * Requires only the instagram_basic permission.
+   */
+  async getProfile(
+    accountId: string,
+    clientId: string,
+  ): Promise<IgProfileResponse> {
+    const cacheKey = `profile:${accountId}`;
+    const cached = this.getCached<IgProfileResponse>(cacheKey);
+    if (cached) return cached;
+
+    const { token, platformUserId } = await this.getValidToken(accountId, clientId);
+
+    const params = new URLSearchParams({
+      fields: 'id,username,followers_count,follows_count,media_count,profile_picture_url',
+      access_token: token,
+    });
+
+    const data = await this.callInstagramApi<{
+      id: string;
+      username: string;
+      followers_count: number;
+      follows_count: number;
+      media_count: number;
+      profile_picture_url?: string;
+    }>(`${this.apiUrl}/${platformUserId}`, params, 'getProfile');
+
+    const result: IgProfileResponse = {
+      followers: data.followers_count ?? 0,
+      following: data.follows_count ?? 0,
+      mediaCount: data.media_count ?? 0,
+      username: data.username,
+      profilePictureUrl: data.profile_picture_url,
+    };
+
+    this.setCached(cacheKey, result);
+    return result;
+  }
+
+  /**
+   * Fetches the last 25 media items for the account (URLs only, no insights).
+   * Requires only the basic instagram_basic permission.
+   */
+  async getMedia(
+    accountId: string,
+    clientId: string,
+  ): Promise<MediaListResponse> {
+    const cacheKey = `media:${accountId}`;
+    const cached = this.getCached<MediaListResponse>(cacheKey);
+    if (cached) return cached;
+
+    const { token, platformUserId } = await this.getValidToken(accountId, clientId);
+
+    const params = new URLSearchParams({
+      fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp',
+      limit: '25',
+      access_token: token,
+    });
+
+    const mediaList = await this.callInstagramApi<IgMediaApiResponse>(
+      `${this.apiUrl}/${platformUserId}/media`,
+      params,
+      'getMedia',
+    );
+
+    const result: MediaListResponse = {
+      data: mediaList.data.map((item) => ({
+        id: item.id,
+        caption: item.caption ?? '',
+        mediaType: item.media_type,
+        mediaUrl: item.media_url ?? '',
+        thumbnailUrl: item.thumbnail_url,
+        timestamp: item.timestamp,
+      })),
+    };
 
     this.setCached(cacheKey, result);
     return result;

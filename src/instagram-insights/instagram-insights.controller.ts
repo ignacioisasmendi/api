@@ -38,6 +38,30 @@ export class InstagramInsightsController {
   }
 
   /**
+   * GET /v1/instagram/:accountId/profile
+   * Returns account profile stats (followers, following, post count).
+   */
+  @Get(':accountId/profile')
+  getProfile(
+    @Param('accountId') accountId: string,
+    @GetClientId() clientId: string,
+  ) {
+    return this.insightsService.getProfile(accountId, clientId);
+  }
+
+  /**
+   * GET /v1/instagram/:accountId/media
+   * Returns the last 25 media items (URLs only, no insights required).
+   */
+  @Get(':accountId/media')
+  getMedia(
+    @Param('accountId') accountId: string,
+    @GetClientId() clientId: string,
+  ) {
+    return this.insightsService.getMedia(accountId, clientId);
+  }
+
+  /**
    * GET /v1/instagram/:accountId/media-with-insights
    * Returns the last 25 media items with their insights attached.
    */
