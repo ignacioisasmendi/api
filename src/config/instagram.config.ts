@@ -22,6 +22,15 @@ export default registerAs('instagram', () => ({
     process.env.INSTAGRAM_REQUEST_TIMEOUT || '30000',
     10,
   ),
+  rateLimitThreshold: parseInt(
+    process.env.INSTAGRAM_RATE_LIMIT_THRESHOLD || '80',
+    10,
+  ),
+  maxRetries: parseInt(process.env.INSTAGRAM_MAX_RETRIES || '3', 10),
+  retryBaseDelayMs: parseInt(
+    process.env.INSTAGRAM_RETRY_BASE_DELAY_MS || '1000',
+    10,
+  ),
 
   // Media Processing
   mediaProcessingWaitTime: parseInt(

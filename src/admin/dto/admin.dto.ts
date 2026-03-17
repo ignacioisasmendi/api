@@ -70,3 +70,8 @@ export interface AdminWaitlistEntry {
   email: string;
   createdAt: Date;
 }
+
+export interface AdminWaitlistGrowthPoint {
+  date: string;
+  signups: number;
+}

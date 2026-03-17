@@ -10,6 +10,7 @@ import {
   AdminUserDetail,
   AdminUserListItem,
   AdminWaitlistEntry,
+  AdminWaitlistGrowthPoint,
   AdminUsersQueryDto,
 } from './dto/admin.dto';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
@@ -181,6 +182,28 @@ export class AdminService {
         totalPages: Math.ceil(total / query.limit),
       },
     };
+  }
+
+  async getWaitlistGrowth(): Promise<AdminWaitlistGrowthPoint[]> {
+    const rows: { date: string; count: number }[] =
+      await this.prisma.$queryRaw`
+        SELECT DATE_TRUNC('day', "createdAt" AT TIME ZONE 'UTC')::date::text AS date,
+               COUNT(*)::int AS count
+        FROM "waitlist_entries"
+        WHERE "createdAt" >= NOW() - INTERVAL '30 days'
+        GROUP BY 1
+        ORDER BY 1
+      `;
+
+    const rowMap = new Map(rows.map((r) => [r.date, Number(r.count)]));
+    const end = new Date();
+    const start = subDays(end, 29);
+    const days = eachDayOfInterval({ start, end });
+
+    return days.map((day) => {
+      const date = format(day, 'yyyy-MM-dd');
+      return { date, signups: rowMap.get(date) ?? 0 };
+    });
   }
 
   private mergeGrowthSeries(

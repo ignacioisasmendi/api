@@ -26,6 +26,11 @@ export class AdminController {
     return this.adminService.getUserDetail(id);
   }
 
+  @Get('waitlist/growth')
+  getWaitlistGrowth() {
+    return this.adminService.getWaitlistGrowth();
+  }
+
   @Get('waitlist')
   getWaitlist(@Query() query: PaginationDto) {
     return this.adminService.getWaitlist(query);

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PublicationService } from '../publications/publication.service';
 import { PublisherFactory } from '../publishers/publisher.factory';
 import { PublicationStatus } from '@prisma/client';
+import { IgRateLimitError } from '../publishers/errors/ig-rate-limit.error';
 
 @Injectable()
 export class CronService {
@@ -90,6 +91,27 @@ export class CronService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error';
+
+          if (error instanceof IgRateLimitError) {
+            this.logger.warn(
+              { publicationId: publication.id, platformUserId: error.platformUserId },
+              `Instagram rate limited during prepare — reverting to SCHEDULED`,
+            );
+            try {
+              await this.publicationService.updatePublicationStatus(
+                publication.id,
+                PublicationStatus.SCHEDULED,
+                `Instagram rate limited, will retry automatically`,
+              );
+            } catch (dbError) {
+              this.logger.error(
+                { err: dbError, publicationId: publication.id },
+                'Failed to revert publication status after rate limit',
+              );
+            }
+            continue;
+          }
+
           this.logger.error(
             { err: error, publicationId: publication.id },
             `Failed to prepare publication ${publication.id}: ${errorMessage}`,
@@ -176,6 +198,27 @@ export class CronService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error';
+
+          if (error instanceof IgRateLimitError) {
+            this.logger.warn(
+              { publicationId: publication.id, platformUserId: error.platformUserId },
+              `Instagram rate limited during publish — reverting to SCHEDULED`,
+            );
+            try {
+              await this.publicationService.updatePublicationStatus(
+                publication.id,
+                PublicationStatus.SCHEDULED,
+                `Instagram rate limited, will retry automatically`,
+              );
+            } catch (dbError) {
+              this.logger.error(
+                { err: dbError, publicationId: publication.id },
+                'Failed to revert publication status after rate limit',
+              );
+            }
+            continue;
+          }
+
           this.logger.error(
             {
               err: error,

@@ -10,6 +10,8 @@ import {
   PublishResult,
 } from './interfaces/platform-publisher.interface';
 import { EncryptionService } from '../shared/encryption/encryption.service';
+import { IgRateLimitService } from './ig-rate-limit.service';
+import { IgRateLimitError } from './errors/ig-rate-limit.error';
 
 @Injectable()
 export class InstagramPublisher implements IPlatformPublisher {
@@ -19,10 +21,13 @@ export class InstagramPublisher implements IPlatformPublisher {
   private readonly apiUrl: string;
   private readonly mediaProcessingWaitTime: number;
   private readonly videoProcessingWaitTime: number;
+  private readonly maxRetries: number;
+  private readonly retryBaseDelayMs: number;
 
   constructor(
     private configService: ConfigService,
     private readonly encryptionService: EncryptionService,
+    private readonly igRateLimitService: IgRateLimitService,
   ) {
     this.apiUrl = this.configService.get<string>('instagram.apiUrl')!;
     this.mediaProcessingWaitTime = this.configService.get<number>(
@@ -30,6 +35,10 @@ export class InstagramPublisher implements IPlatformPublisher {
     )!;
     this.videoProcessingWaitTime = this.configService.get<number>(
       'instagram.videoProcessingWaitTime',
+    )!;
+    this.maxRetries = this.configService.get<number>('instagram.maxRetries')!;
+    this.retryBaseDelayMs = this.configService.get<number>(
+      'instagram.retryBaseDelayMs',
     )!;
   }
 
@@ -236,6 +245,8 @@ export class InstagramPublisher implements IPlatformPublisher {
       `${this.apiUrl}/${socialAccount.platformUserId}/media`,
       params,
       'createMediaContainer',
+      'POST',
+      socialAccount.platformUserId ?? undefined,
     );
 
     this.logger.log(`Feed container created with ID: ${data.id}`);
@@ -245,6 +256,7 @@ export class InstagramPublisher implements IPlatformPublisher {
       data.id,
       this.plainToken(publication),
       processingWait,
+      socialAccount.platformUserId ?? undefined,
     );
 
     return data.id;
@@ -274,12 +286,15 @@ export class InstagramPublisher implements IPlatformPublisher {
       `${this.apiUrl}/${socialAccount.platformUserId}/media`,
       params,
       'createStoryContainer',
+      'POST',
+      socialAccount.platformUserId ?? undefined,
     );
 
     await this.waitForMediaProcessing(
       data.id,
       this.plainToken(publication),
       this.mediaProcessingWaitTime,
+      socialAccount.platformUserId ?? undefined,
     );
 
     return data.id;
@@ -311,12 +326,15 @@ export class InstagramPublisher implements IPlatformPublisher {
       `${this.apiUrl}/${socialAccount.platformUserId}/media`,
       params,
       'createReelContainer',
+      'POST',
+      socialAccount.platformUserId ?? undefined,
     );
 
     await this.waitForMediaProcessing(
       data.id,
       this.plainToken(publication),
       this.videoProcessingWaitTime,
+      socialAccount.platformUserId ?? undefined,
     );
 
     return data.id;
@@ -330,6 +348,7 @@ export class InstagramPublisher implements IPlatformPublisher {
     creationId: string,
     accessToken: string,
     timeoutMs: number,
+    platformUserId?: string,
   ): Promise<void> {
     const start = Date.now();
     let attempts = 0;
@@ -345,6 +364,7 @@ export class InstagramPublisher implements IPlatformPublisher {
         }),
         'checkContainerStatus',
         'GET',
+        platformUserId,
       );
 
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -435,6 +455,8 @@ export class InstagramPublisher implements IPlatformPublisher {
           `${this.apiUrl}/${socialAccount.platformUserId}/media`,
           params,
           `createCarouselItem[${index}]`,
+          'POST',
+          socialAccount.platformUserId ?? undefined,
         );
 
         const timeout = isVideo
@@ -445,6 +467,7 @@ export class InstagramPublisher implements IPlatformPublisher {
           data.id,
           this.plainToken(publication),
           timeout,
+          socialAccount.platformUserId ?? undefined,
         );
 
         return data.id as string;
@@ -460,12 +483,15 @@ export class InstagramPublisher implements IPlatformPublisher {
         access_token: this.plainToken(publication),
       }),
       'createCarouselContainer',
+      'POST',
+      socialAccount.platformUserId ?? undefined,
     );
 
     await this.waitForMediaProcessing(
       carouselData.id,
       this.plainToken(publication),
       this.mediaProcessingWaitTime,
+      socialAccount.platformUserId ?? undefined,
     );
 
     return carouselData.id;
@@ -491,6 +517,8 @@ export class InstagramPublisher implements IPlatformPublisher {
         access_token: accessToken,
       }),
       'publishMedia',
+      'POST',
+      platformUserId,
     );
 
     const mediaId: string = data.id;
@@ -502,6 +530,7 @@ export class InstagramPublisher implements IPlatformPublisher {
         new URLSearchParams({ fields: 'permalink', access_token: accessToken }),
         'fetchPermalink',
         'GET',
+        platformUserId,
       );
       return { id: mediaId, permalink: meta.permalink };
     } catch {
@@ -511,57 +540,137 @@ export class InstagramPublisher implements IPlatformPublisher {
   }
 
   /**
-   * Centralized Instagram Graph API caller with structured error handling.
+   * Centralized Instagram Graph API caller with rate limit awareness,
+   * header tracking, and exponential backoff for transient errors.
    *
    * The IG Graph API returns errors in shape: { error: { message, type, code, fbtrace_id } }
-   * This method extracts and logs all of those fields for full visibility.
+   * Rate limit status is communicated via the X-Business-Use-Case-Usage response header.
    */
   private async callInstagramApi(
     url: string,
     params: URLSearchParams,
     context: string,
     method: 'GET' | 'POST' = 'POST',
+    platformUserId?: string,
   ): Promise<any> {
-    try {
-      const response =
-        method === 'GET'
-          ? await axios.get(`${url}?${params.toString()}`)
-          : await axios.post(url, params, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            });
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const igError = error.response?.data?.error;
-        const status = error.response?.status;
-        const message = igError?.message || error.message;
-        const code = igError?.code;
-        const type = igError?.type;
-        const fbtraceId = igError?.fbtrace_id;
-
-        this.logger.error(
-          {
-            status,
-            igErrorCode: code,
-            igErrorType: type,
-            igMessage: message,
-            fbtraceId,
-            context,
-          },
-          `Instagram API error during ${context}: ${status} — ${message}`,
-        );
-
-        throw new Error(
-          `Instagram ${context} failed: ${message} (HTTP ${status}, code: ${code || 'N/A'})`,
-        );
-      }
-
-      this.logger.error(
-        { err: error, context },
-        `Unexpected error during Instagram ${context}`,
+    // Pre-flight: check if this account is currently rate limited
+    if (platformUserId && this.igRateLimitService.isThrottled(platformUserId)) {
+      const waitMs =
+        this.igRateLimitService.getThrottledUntilMs(platformUserId);
+      this.logger.warn(
+        { platformUserId, waitMs },
+        `Skipping Instagram ${context}: account is rate limited`,
       );
-      throw error;
+      throw new IgRateLimitError(
+        platformUserId,
+        waitMs,
+        `Instagram rate limit active for account ${platformUserId} — retry in ${Math.ceil(waitMs / 60_000)} min`,
+      );
     }
+
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response =
+          method === 'GET'
+            ? await axios.get(`${url}?${params.toString()}`)
+            : await axios.post(url, params, {
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+              });
+
+        // Track usage from response header
+        if (platformUserId) {
+          const usageHeader =
+            response.headers['x-business-use-case-usage'];
+          if (usageHeader) {
+            this.igRateLimitService.updateFromHeader(
+              platformUserId,
+              usageHeader,
+            );
+          }
+        }
+
+        return response.data;
+      } catch (error) {
+        lastError = error;
+
+        if (axios.isAxiosError(error)) {
+          const igError = error.response?.data?.error;
+          const status = error.response?.status;
+          const message = igError?.message || error.message;
+          const code: number | undefined = igError?.code;
+          const type = igError?.type;
+          const fbtraceId = igError?.fbtrace_id;
+          const estimatedMinutes: number =
+            igError?.error_data?.estimated_time_to_regain_access ?? 0;
+
+          this.logger.error(
+            {
+              status,
+              igErrorCode: code,
+              igErrorType: type,
+              igMessage: message,
+              fbtraceId,
+              context,
+              attempt,
+            },
+            `Instagram API error during ${context}: ${status} — ${message}`,
+          );
+
+          // Rate limit errors — do not retry, propagate immediately
+          if (code === 80002 || code === 80006) {
+            if (platformUserId) {
+              this.igRateLimitService.setThrottled(
+                platformUserId,
+                estimatedMinutes,
+              );
+            }
+            throw new IgRateLimitError(
+              platformUserId ?? 'unknown',
+              estimatedMinutes * 60_000,
+              `Instagram ${context} failed: ${message} (code: ${code})`,
+            );
+          }
+
+          // Non-retryable client errors (4xx except 429)
+          if (status && status >= 400 && status < 500 && status !== 429) {
+            throw new Error(
+              `Instagram ${context} failed: ${message} (HTTP ${status}, code: ${code ?? 'N/A'})`,
+            );
+          }
+        }
+
+        // Transient error — apply exponential backoff before retrying
+        if (attempt < this.maxRetries) {
+          const delay = this.retryBaseDelayMs * Math.pow(2, attempt - 1);
+          this.logger.warn(
+            { context, attempt, delay },
+            `Retrying Instagram ${context} after ${delay}ms (attempt ${attempt}/${this.maxRetries})`,
+          );
+          await this.delay(delay);
+        }
+      }
+    }
+
+    // All retries exhausted
+    if (axios.isAxiosError(lastError)) {
+      const igError = (lastError as any).response?.data?.error;
+      const status = (lastError as any).response?.status;
+      const message = igError?.message || (lastError as any).message;
+      const code = igError?.code;
+      throw new Error(
+        `Instagram ${context} failed after ${this.maxRetries} attempts: ${message} (HTTP ${status}, code: ${code ?? 'N/A'})`,
+      );
+    }
+
+    this.logger.error(
+      { err: lastError, context },
+      `Unexpected error during Instagram ${context}`,
+    );
+    throw lastError;
   }
 
   private delay(ms: number): Promise<void> {
