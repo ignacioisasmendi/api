@@ -77,6 +77,12 @@ export class IgOauthService {
     shortLivedToken: string,
   ): Promise<{ access_token: string; expires_in: number }> {
     try {
+      this.logger.log('========== LONG-LIVED TOKEN EXCHANGE DEBUG START ==========');
+      this.logger.log(`short-lived token length: ${shortLivedToken?.length}`);
+      this.logger.log(`short-lived token prefix: "${shortLivedToken?.substring(0, 20)}..."`);
+      this.logger.log(`client_secret set: ${!!this.instagramAppSecret}`);
+      this.logger.log(`client_secret length: ${this.instagramAppSecret?.length}`);
+
       const { data } = await axios.get(
         'https://graph.instagram.com/access_token',
         {
@@ -88,14 +94,23 @@ export class IgOauthService {
           timeout: 15_000,
         },
       );
+
+      this.logger.log('========== LONG-LIVED TOKEN EXCHANGE SUCCESS ==========');
+      this.logger.log(`long-lived token length: ${data?.access_token?.length}`);
+      this.logger.log(`expires_in: ${data?.expires_in}`);
       return data;
     } catch (error) {
-      this.logger.error('Instagram long-lived token exchange failed');
+      this.logger.error('========== LONG-LIVED TOKEN EXCHANGE FAILED ==========');
       if (axios.isAxiosError(error)) {
+        this.logger.error(`HTTP Status: ${error.response?.status}`);
+        this.logger.error(`Response data: ${JSON.stringify(error.response?.data, null, 2)}`);
+        this.logger.error(`Request URL: ${error.config?.url}`);
+        this.logger.error(`Request params: ${JSON.stringify(error.config?.params, null, 2)}`);
         throw new Error(
           `Long-lived token exchange failed: ${error.response?.data?.error?.message || error.message}`,
         );
       }
+      this.logger.error(`Non-Axios error: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
