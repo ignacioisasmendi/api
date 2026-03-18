@@ -9,7 +9,7 @@ export class IgOauthService {
   private instagramAppSecret: string;
   private instagramCallbackUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(configService: ConfigService) {
     this.instagramAppId = configService.get('instagram.appId')!;
     this.instagramAppSecret = configService.get('instagram.appSecret')!;
     this.instagramCallbackUrl = configService.get('instagram.callbackUrl')!;
@@ -18,57 +18,36 @@ export class IgOauthService {
   }
 
   async exchangeCodeForToken(code: string) {
+    const form = new URLSearchParams({
+      client_id: this.instagramAppId,
+      client_secret: this.instagramAppSecret,
+      grant_type: 'authorization_code',
+      redirect_uri: this.instagramCallbackUrl,
+      code,
+    });
+
     try {
-      this.logger.log('========== INSTAGRAM TOKEN EXCHANGE DEBUG START ==========');
-      this.logger.log(`redirect_uri value: "${this.instagramCallbackUrl}"`);
-      this.logger.log(`redirect_uri type: ${typeof this.instagramCallbackUrl}`);
-      this.logger.log(`redirect_uri length: ${this.instagramCallbackUrl?.length}`);
-      this.logger.log(`redirect_uri trimmed: "${this.instagramCallbackUrl?.trim()}"`);
-      this.logger.log(`redirect_uri charCodes: [${Array.from(this.instagramCallbackUrl || '').map(c => c.charCodeAt(0)).join(', ')}]`);
-      this.logger.log(`client_id value: "${this.instagramAppId}"`);
-      this.logger.log(`client_id type: ${typeof this.instagramAppId}`);
-      this.logger.log(`code value: "${code}"`);
-      this.logger.log(`code length: ${code?.length}`);
-      this.logger.log(`ENV raw INSTAGRAM_CALLBACK_URL: "${process.env.INSTAGRAM_CALLBACK_URL}"`);
-      this.logger.log(`ENV raw type: ${typeof process.env.INSTAGRAM_CALLBACK_URL}`);
-      this.logger.log(`ConfigService value: "${this.configService.get('instagram.callbackUrl')}"`);
-      this.logger.log(`Expected: "https://app.planer.com.ar/auth/instagram/callback"`);
-      this.logger.log(`Match? ${this.instagramCallbackUrl === 'https://app.planer.com.ar/auth/instagram/callback'}`);
-
-      const form = new URLSearchParams({
-        client_id: this.instagramAppId,
-        client_secret: this.instagramAppSecret,
-        grant_type: 'authorization_code',
-        redirect_uri: this.instagramCallbackUrl,
-        code,
-      });
-
-      this.logger.log(`Full form body: ${form.toString()}`);
-      this.logger.log('========== SENDING REQUEST TO INSTAGRAM ==========');
-
       const { data } = await axios.post(
         'https://api.instagram.com/oauth/access_token',
         form.toString(),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
       );
 
-      this.logger.log('========== INSTAGRAM TOKEN EXCHANGE SUCCESS ==========');
+      this.logger.log('Instagram short-lived token exchange succeeded');
       return data;
     } catch (error) {
-      this.logger.error('========== INSTAGRAM TOKEN EXCHANGE FAILED ==========');
-      this.logger.error(`redirect_uri used: "${this.instagramCallbackUrl}"`);
-      this.logger.error(`ENV raw INSTAGRAM_CALLBACK_URL: "${process.env.INSTAGRAM_CALLBACK_URL}"`);
-
       if (axios.isAxiosError(error)) {
-        this.logger.error(`HTTP Status: ${error.response?.status}`);
-        this.logger.error(`Response data: ${JSON.stringify(error.response?.data, null, 2)}`);
-        this.logger.error(`Request URL: ${error.config?.url}`);
-        this.logger.error(`Request body: ${error.config?.data}`);
+        this.logger.error('Instagram short-lived token exchange failed', {
+          status: error.response?.status,
+          response: error.response?.data,
+          redirect_uri: this.instagramCallbackUrl,
+          client_id: this.instagramAppId,
+          code_length: code?.length,
+        });
         throw new Error(
           `Instagram OAuth failed: ${error.response?.data?.error_message || error.message}`,
         );
       }
-
       throw error;
     }
   }
@@ -77,43 +56,38 @@ export class IgOauthService {
     shortLivedToken: string,
   ): Promise<{ access_token: string; expires_in: number }> {
     try {
-      this.logger.log('========== LONG-LIVED TOKEN EXCHANGE DEBUG START ==========');
-      this.logger.log(`short-lived token length: ${shortLivedToken?.length}`);
-      this.logger.log(`short-lived token prefix: "${shortLivedToken?.substring(0, 20)}..."`);
-      this.logger.log(`client_secret set: ${!!this.instagramAppSecret}`);
-      this.logger.log(`client_secret length: ${this.instagramAppSecret?.length}`);
-
-      const form = new URLSearchParams({
-        grant_type: 'ig_exchange_token',
-        client_secret: this.instagramAppSecret,
-        access_token: shortLivedToken,
-      });
-
-      const { data } = await axios.post(
+      const { data } = await axios.get(
         'https://graph.instagram.com/access_token',
-        form.toString(),
         {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          params: {
+            grant_type: 'ig_exchange_token',
+            client_secret: this.instagramAppSecret,
+            access_token: shortLivedToken,
+          },
           timeout: 15_000,
         },
       );
 
-      this.logger.log('========== LONG-LIVED TOKEN EXCHANGE SUCCESS ==========');
-      this.logger.log(`long-lived token length: ${data?.access_token?.length}`);
-      this.logger.log(`expires_in: ${data?.expires_in}`);
+      this.logger.log('Instagram long-lived token exchange succeeded', {
+        token_length: data?.access_token?.length,
+        expires_in: data?.expires_in,
+      });
       return data;
     } catch (error) {
-      this.logger.error('========== LONG-LIVED TOKEN EXCHANGE FAILED ==========');
       if (axios.isAxiosError(error)) {
-        this.logger.error(`HTTP Status: ${error.response?.status}`);
-        this.logger.error(`Response data: ${JSON.stringify(error.response?.data, null, 2)}`);
-        this.logger.error(`Request URL: ${error.config?.url}`);
-        this.logger.error(`Request params: ${JSON.stringify(error.config?.params, null, 2)}`);
+        this.logger.error('Instagram long-lived token exchange failed', {
+          status: error.response?.status,
+          response: error.response?.data,
+          short_lived_token_length: shortLivedToken?.length,
+          client_secret_set: !!this.instagramAppSecret,
+        });
         throw new Error(
           `Long-lived token exchange failed: ${error.response?.data?.error?.message || error.message}`,
         );
       }
-      this.logger.error(`Non-Axios error: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error('Instagram long-lived token exchange failed (non-HTTP)', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
