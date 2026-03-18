@@ -83,7 +83,7 @@ export class IgOauthService {
       this.logger.log(`client_secret set: ${!!this.instagramAppSecret}`);
       this.logger.log(`client_secret length: ${this.instagramAppSecret?.length}`);
 
-      const { data } = await axios.get(
+      const { data } = await axios.post(
         'https://graph.instagram.com/access_token',
         {
           params: {
