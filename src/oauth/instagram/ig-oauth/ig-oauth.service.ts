@@ -83,14 +83,17 @@ export class IgOauthService {
       this.logger.log(`client_secret set: ${!!this.instagramAppSecret}`);
       this.logger.log(`client_secret length: ${this.instagramAppSecret?.length}`);
 
+      const form = new URLSearchParams({
+        grant_type: 'ig_exchange_token',
+        client_secret: this.instagramAppSecret,
+        access_token: shortLivedToken,
+      });
+
       const { data } = await axios.post(
         'https://graph.instagram.com/access_token',
+        form.toString(),
         {
-          params: {
-            grant_type: 'ig_exchange_token',
-            client_secret: this.instagramAppSecret,
-            access_token: shortLivedToken,
-          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           timeout: 15_000,
         },
       );
