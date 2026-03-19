@@ -36,6 +36,7 @@ model Client {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   contents       Content[]
   socialAccounts SocialAccount[]
+  taskBoards     TaskBoard[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -309,4 +310,56 @@ enum MediaType {
 enum SharePermission {
   VIEW_ONLY
   VIEW_AND_COMMENT
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model TaskBoard {
+  id        String     @id @default(cuid())
+  clientId  String
+  name      String     @db.VarChar(100)
+  color     String?
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lists     TaskList[]
+
+  @@index([clientId])
+}
+
+model TaskList {
+  id          String    @id @default(cuid())
+  taskBoardId String
+  name        String    @db.VarChar(100)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  taskBoard   TaskBoard @relation(fields: [taskBoardId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([taskBoardId])
+  @@index([taskBoardId, order])
+}
+
+model Task {
+  id          String        @id @default(cuid())
+  taskListId  String
+  title       String        @db.VarChar(500)
+  description String?
+  order       Int           @default(0)
+  priority    TaskPriority?
+  dueDate     DateTime?     @db.Timestamptz(3)
+  labels      String[]
+  coverColor  String?
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+  taskList    TaskList      @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+
+  @@index([taskListId])
+  @@index([taskListId, order])
 }

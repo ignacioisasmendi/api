@@ -29,6 +29,9 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { PexelsModule } from './pexels/pexels.module';
 import { AdminModule } from './admin/admin.module';
+import { TaskBoardModule } from './task-boards/task-board.module';
+import { TaskListModule } from './task-lists/task-list.module';
+import { TaskModule } from './tasks/task.module';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -94,6 +97,9 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     EngagementModule,
     PexelsModule,
     AdminModule,
+    TaskBoardModule,
+    TaskListModule,
+    TaskModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
