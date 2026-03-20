@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsEnum,
   IsDateString,
+  IsBoolean,
 } from 'class-validator';
 import { TaskPriority } from '@prisma/client';
 
@@ -66,6 +67,10 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsString()
   coverColor?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  done?: boolean;
 }
 
 export class MoveTaskDto {
@@ -82,4 +87,29 @@ export class ReorderTasksDto {
   @IsString({ each: true })
   @ArrayMinSize(1)
   taskIds: string[];
+}
+
+export class CreateChecklistItemDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  title: string;
+}
+
+export class UpdateChecklistItemDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  title?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  done?: boolean;
+}
+
+export class AddTaskDependencyDto {
+  @IsString()
+  @IsNotEmpty()
+  blockedById: string;
 }

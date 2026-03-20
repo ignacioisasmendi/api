@@ -5,7 +5,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto/task.dto';
+import {
+  CreateTaskDto,
+  UpdateTaskDto,
+  MoveTaskDto,
+  CreateChecklistItemDto,
+  UpdateChecklistItemDto,
+  AddTaskDependencyDto,
+} from './dto/task.dto';
 
 @Injectable()
 export class TaskService {
@@ -25,6 +32,10 @@ export class TaskService {
     const tasks = await this.prisma.task.findMany({
       where: { taskList: { taskBoardId: boardId } },
       orderBy: { order: 'asc' },
+      include: {
+        checklist: { select: { id: true, done: true } },
+        _count: { select: { blockedBy: true } },
+      },
     });
 
     // Group by listId
@@ -34,6 +45,35 @@ export class TaskService {
       grouped[task.taskListId].push(task);
     }
     return grouped;
+  }
+
+  async getTask(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    clientId: string,
+  ) {
+    const task = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        taskList: { id: listId, taskBoard: { id: boardId, clientId } },
+      },
+      include: {
+        checklist: { orderBy: { order: 'asc' } },
+        blockedBy: {
+          include: {
+            blockedBy: {
+              select: { id: true, title: true, taskListId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Task ${taskId} not found`);
+    }
+    return task;
   }
 
   async listTasks(boardId: string, listId: string, clientId: string) {
@@ -106,6 +146,7 @@ export class TaskService {
         }),
         ...(dto.labels !== undefined && { labels: dto.labels }),
         ...('coverColor' in dto && { coverColor: dto.coverColor }),
+        ...(dto.done !== undefined && { done: dto.done }),
       },
     });
   }
@@ -218,6 +259,121 @@ export class TaskService {
     });
   }
 
+  // --- Checklist ---
+
+  async createChecklistItem(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    clientId: string,
+    dto: CreateChecklistItemDto,
+  ) {
+    await this.verifyTaskOwnership(taskId, listId, boardId, clientId);
+
+    const maxOrder = await this.prisma.checklistItem.aggregate({
+      where: { taskId },
+      _max: { order: true },
+    });
+    const nextOrder = (maxOrder._max.order ?? -1) + 1;
+
+    return this.prisma.checklistItem.create({
+      data: { taskId, title: dto.title, order: nextOrder },
+    });
+  }
+
+  async updateChecklistItem(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    itemId: string,
+    clientId: string,
+    dto: UpdateChecklistItemDto,
+  ) {
+    await this.verifyTaskOwnership(taskId, listId, boardId, clientId);
+
+    const item = await this.prisma.checklistItem.findFirst({
+      where: { id: itemId, taskId },
+    });
+    if (!item) {
+      throw new NotFoundException(`Checklist item ${itemId} not found`);
+    }
+
+    return this.prisma.checklistItem.update({
+      where: { id: itemId },
+      data: {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.done !== undefined && { done: dto.done }),
+      },
+    });
+  }
+
+  async deleteChecklistItem(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    itemId: string,
+    clientId: string,
+  ) {
+    await this.verifyTaskOwnership(taskId, listId, boardId, clientId);
+
+    const item = await this.prisma.checklistItem.findFirst({
+      where: { id: itemId, taskId },
+    });
+    if (!item) {
+      throw new NotFoundException(`Checklist item ${itemId} not found`);
+    }
+
+    await this.prisma.checklistItem.delete({ where: { id: itemId } });
+  }
+
+  // --- Dependencies ---
+
+  async addDependency(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    clientId: string,
+    dto: AddTaskDependencyDto,
+  ) {
+    await this.verifyTaskOwnership(taskId, listId, boardId, clientId);
+
+    if (dto.blockedById === taskId) {
+      throw new BadRequestException('A task cannot depend on itself');
+    }
+
+    const blocker = await this.prisma.task.findFirst({
+      where: {
+        id: dto.blockedById,
+        taskList: { taskBoard: { id: boardId, clientId } },
+      },
+    });
+    if (!blocker) {
+      throw new NotFoundException(`Task ${dto.blockedById} not found`);
+    }
+
+    return this.prisma.taskDependency.upsert({
+      where: {
+        taskId_blockedById: { taskId, blockedById: dto.blockedById },
+      },
+      create: { taskId, blockedById: dto.blockedById },
+      update: {},
+    });
+  }
+
+  async removeDependency(
+    boardId: string,
+    listId: string,
+    taskId: string,
+    blockedById: string,
+    clientId: string,
+  ) {
+    await this.verifyTaskOwnership(taskId, listId, boardId, clientId);
+
+    await this.prisma.taskDependency.deleteMany({
+      where: { taskId, blockedById },
+    });
+  }
+
   private async verifyListOwnership(
     listId: string,
     boardId: string,
@@ -230,5 +386,23 @@ export class TaskService {
     if (!list) {
       throw new NotFoundException(`List ${listId} not found`);
     }
+  }
+
+  private async verifyTaskOwnership(
+    taskId: string,
+    listId: string,
+    boardId: string,
+    clientId: string,
+  ) {
+    const task = await this.prisma.task.findFirst({
+      where: {
+        id: taskId,
+        taskList: { id: listId, taskBoard: { id: boardId, clientId } },
+      },
+    });
+    if (!task) {
+      throw new NotFoundException(`Task ${taskId} not found`);
+    }
+    return task;
   }
 }
