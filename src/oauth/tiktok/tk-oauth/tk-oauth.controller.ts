@@ -57,6 +57,7 @@ export class TkOauthController {
         refreshExpiresAt: new Date(
           Date.now() + tokenData.refresh_expires_in * 1000,
         ),
+        metadata: { profilePictureUrl: tiktokUser.avatar_url ?? null },
       },
       update: {
         accessToken: encryptedAccessToken,
@@ -68,6 +69,7 @@ export class TkOauthController {
         ),
         isActive: true,
         disconnectedAt: null,
+        metadata: { profilePictureUrl: tiktokUser.avatar_url ?? null },
       },
     });
 
