@@ -13,6 +13,9 @@ export const TIKTOK_ENDPOINTS = {
   /** Initialize a direct-post (FILE_UPLOAD or PULL_FROM_URL) */
   DIRECT_POST_INIT: '/post/publish/video/init/',
 
+  /** Query publish status to get the final video ID */
+  PUBLISH_STATUS_FETCH: '/post/publish/status/fetch/',
+
   /** OAuth token endpoint (used for refresh) */
   OAUTH_TOKEN: '/oauth/token/',
 } as const;

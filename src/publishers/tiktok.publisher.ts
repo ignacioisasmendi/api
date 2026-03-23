@@ -97,6 +97,7 @@ export class TikTokPublisher implements IPlatformPublisher {
           videoMedia,
           publication.platformConfig as Record<string, unknown> | null,
           publication.id,
+          socialAccount.username ?? '',
         );
       },
     );
@@ -115,6 +116,7 @@ export class TikTokPublisher implements IPlatformPublisher {
     videoMedia: { url: string; size: number; type: string },
     platformConfig: Record<string, unknown> | null,
     publicationId: string,
+    username: string,
   ): Promise<PublishResult> {
     const tempFilePath = path.join(
       os.tmpdir(),
@@ -161,9 +163,16 @@ export class TikTokPublisher implements IPlatformPublisher {
         `TikTok post initiated successfully — publish_id: ${initData.publish_id}`,
       );
 
+      const link = await this.waitForPublishComplete(
+        accessToken,
+        initData.publish_id,
+        username,
+      );
+
       return {
         success: true,
         platformId: initData.publish_id,
+        link,
         message: 'TikTok video published successfully (FILE_UPLOAD)',
       };
     } finally {
@@ -177,6 +186,63 @@ export class TikTokPublisher implements IPlatformPublisher {
         this.logger.warn(`Failed to clean up temp file: ${tempFilePath}`, err);
       }
     }
+  }
+
+  /**
+   * Poll TikTok's publish status endpoint until the video is live,
+   * then return its permalink. Returns undefined on timeout or failure.
+   */
+  private async waitForPublishComplete(
+    accessToken: string,
+    publishId: string,
+    username: string,
+  ): Promise<string | undefined> {
+    const maxWaitMs = 3 * 60 * 1000; // 3 minutes
+    const pollIntervalMs = 5_000;
+    const start = Date.now();
+
+    while (Date.now() - start < maxWaitMs) {
+      await this.delay(pollIntervalMs);
+
+      try {
+        const statusData = await this.tiktokPostService.queryPublishStatus(
+          accessToken,
+          publishId,
+        );
+
+        if (
+          statusData.status === 'PUBLISH_COMPLETE' &&
+          statusData.publicaly_available_post_id?.length
+        ) {
+          const videoId = statusData.publicaly_available_post_id[0];
+          return `https://www.tiktok.com/@${username}/video/${videoId}`;
+        }
+
+        if (statusData.status === 'FAILED') {
+          this.logger.warn(
+            `TikTok publish failed for publish_id ${publishId}: ${statusData.fail_reason ?? 'unknown reason'}`,
+          );
+          return undefined;
+        }
+
+        this.logger.debug(
+          `TikTok publish status for ${publishId}: ${statusData.status}`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Error polling TikTok publish status for ${publishId}: ${err instanceof Error ? err.message : 'Unknown'}`,
+        );
+      }
+    }
+
+    this.logger.warn(
+      `Timeout waiting for TikTok publish_id ${publishId} to complete`,
+    );
+    return undefined;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

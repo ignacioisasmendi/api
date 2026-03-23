@@ -93,6 +93,17 @@ export interface TokenRefreshData {
 /** The refresh endpoint returns a flat object, not the standard envelope. */
 export type TokenRefreshResponse = TokenRefreshData;
 
+// ── Publish Status ───────────────────────────────────────────────────
+
+export interface PublishStatusData {
+  status: 'PROCESSING_UPLOAD' | 'PUBLISH_COMPLETE' | 'FAILED' | 'PROCESSING_DOWNLOAD';
+  /** Video IDs available once status is PUBLISH_COMPLETE. TikTok's own typo. */
+  publicaly_available_post_id?: string[];
+  fail_reason?: string;
+}
+
+export type PublishStatusResponse = TikTokApiResponse<PublishStatusData>;
+
 // ── Helper: check if init data includes an upload_url ───────────────
 
 export function isFileUploadInitData(

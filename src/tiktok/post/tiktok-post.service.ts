@@ -18,6 +18,8 @@ import {
   DirectPostInitRequestBody,
   TokenRefreshResponse,
   TikTokApiResponse,
+  PublishStatusData,
+  PublishStatusResponse,
   isFileUploadInitData,
 } from '../tiktok.types';
 import { InitDirectPostDto } from './dto/init-direct-post.dto';
@@ -164,7 +166,44 @@ export class TiktokPostService {
   }
 
   // ────────────────────────────────────────────────────────────────
-  // 2. Upload Video (FILE_UPLOAD only)
+  // 2. Query Publish Status
+  // ────────────────────────────────────────────────────────────────
+
+  /**
+   * Fetch the current publish status for a given publish_id.
+   * Once status is PUBLISH_COMPLETE, `publicaly_available_post_id` contains
+   * the real video ID needed to build the post permalink.
+   */
+  async queryPublishStatus(
+    accessToken: string,
+    publishId: string,
+  ): Promise<PublishStatusData> {
+    const url = `${this.apiUrl}${TIKTOK_ENDPOINTS.PUBLISH_STATUS_FETCH}`;
+
+    const { data } = await firstValueFrom(
+      this.httpService.post<PublishStatusResponse>(
+        url,
+        { publish_id: publishId },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+        },
+      ),
+    );
+
+    if (data.error.code !== TIKTOK_ERROR_CODES.OK) {
+      throw new Error(
+        `TikTok status query failed: ${data.error.code} – ${data.error.message}`,
+      );
+    }
+
+    return data.data;
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 3. Upload Video (FILE_UPLOAD only)
   // ────────────────────────────────────────────────────────────────
 
   /**
