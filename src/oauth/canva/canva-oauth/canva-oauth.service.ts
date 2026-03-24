@@ -11,7 +11,7 @@ export interface CanvaTokenResponse {
 }
 
 export interface CanvaUserProfile {
-  profile: {
+  user: {
     user_id: string;
     display_name: string;
     profile_url: string;

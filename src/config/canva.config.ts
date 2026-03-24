@@ -6,7 +6,7 @@ export default registerAs('canva', () => ({
   callbackUrl: process.env.CANVA_CALLBACK_URL,
   authUrl: 'https://www.canva.com/api/oauth/authorize',
   tokenUrl: 'https://api.canva.com/rest/v1/oauth/token',
-  profileUrl: 'https://api.canva.com/rest/v1/users/me/profile',
+  profileUrl: 'https://api.canva.com/rest/v1/users/me',
   scopes:
     'design:content:read design:content:write design:meta:read asset:read asset:write profile:read',
 }));
