@@ -13,7 +13,14 @@ export class CanvaService {
     try {
       const { data } = await axios.post(
         'https://api.canva.com/rest/v1/designs',
-        {},
+        {
+          design_type: {
+            type: 'custom',
+            width: 1080,
+            height: 1080,
+            units: 'px',
+          },
+        },
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
