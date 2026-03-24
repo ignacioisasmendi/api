@@ -40,7 +40,7 @@ export class CanvaOauthController {
     const canvaUser = profile.user;
 
     this.logger.log(
-      `Canva user connected: ${canvaUser.display_name} (${canvaUser.user_id})`,
+      `Canva user connected: (${canvaUser.user_id})`,
     );
 
     // 3. Encrypt tokens
