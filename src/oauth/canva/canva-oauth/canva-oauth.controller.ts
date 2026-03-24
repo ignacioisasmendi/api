@@ -39,9 +39,7 @@ export class CanvaOauthController {
     );
     const canvaUser = profile.user;
 
-    this.logger.log(
-      `Canva user connected: (${canvaUser.user_id})`,
-    );
+    console.log('canvaUser', canvaUser ? JSON.stringify(canvaUser) : 'No user found');
 
     // 3. Encrypt tokens
     const encryptedAccessToken = this.encryptionService.encrypt(
