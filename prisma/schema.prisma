@@ -174,14 +174,15 @@ model PublicationMedia {
 }
 
 model OAuthState {
-  id        String   @id @default(uuid())
-  state     String   @unique
-  provider  String
-  userId    String
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  expiresAt DateTime @db.Timestamptz(3)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  state        String   @unique
+  provider     String
+  userId       String
+  used         Boolean  @default(false)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt    DateTime @db.Timestamptz(3)
+  codeVerifier String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([state])
   @@index([userId])
@@ -299,6 +300,7 @@ enum Platform {
   TIKTOK
   LINKEDIN
   X
+  CANVA
 }
 
 enum MediaType {

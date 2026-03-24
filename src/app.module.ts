@@ -14,6 +14,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Auth0Guard } from './auth/auth0.guard';
 import { IgOauthModule } from './oauth/instagram/ig-oauth/ig-oauth.module';
 import { TkOauthModule } from './oauth/tiktok/tk-oauth/tk-oauth.module';
+import { CanvaOauthModule } from './oauth/canva/canva-oauth/canva-oauth.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { EncryptionModule } from './shared/encryption/encryption.module';
 import { TiktokModule } from './tiktok/tiktok.module';
@@ -82,6 +83,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     CronModule,
     IgOauthModule,
     TkOauthModule,
+    CanvaOauthModule,
     StorageModule,
     EncryptionModule,
     TiktokModule,

@@ -11,6 +11,7 @@ import authConfig from './auth.config';
 import pexelsConfig from './pexels.config';
 import encryptionConfig from './encryption.config';
 import adminConfig from './admin.config';
+import canvaConfig from './canva.config';
 import { ConfigValidationService } from './validation/config-validation.service';
 
 @Global()
@@ -32,6 +33,7 @@ import { ConfigValidationService } from './validation/config-validation.service'
         pexelsConfig,
         encryptionConfig,
         adminConfig,
+        canvaConfig,
       ],
     }),
   ],
