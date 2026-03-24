@@ -10,12 +10,15 @@ export interface CanvaTokenResponse {
   scope: string;
 }
 
+interface CanvaUserData {
+  user_id: string;
+  display_name: string;
+  profile_url: string;
+}
+
 export interface CanvaUserProfile {
-  user: {
-    user_id: string;
-    display_name: string;
-    profile_url: string;
-  };
+  user?: CanvaUserData;
+  team_user?: CanvaUserData & { team_id: string };
 }
 
 @Injectable()

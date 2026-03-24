@@ -77,12 +77,13 @@ export class CanvaOauthController {
         `[handleCallback] Profile response: ${JSON.stringify(profile)}`,
       );
 
-      if (!profile?.user) {
+      const userData = profile?.user ?? profile?.team_user;
+      if (!userData) {
         throw new Error(
-          `Canva profile response missing "user" field. Got keys: ${Object.keys(profile ?? {}).join(', ')}`,
+          `Canva profile response missing "user"/"team_user" field. Got keys: ${Object.keys(profile ?? {}).join(', ')}`,
         );
       }
-      canvaUser = profile.user;
+      canvaUser = userData;
 
       this.logger.debug(
         `[handleCallback] Canva user — id=${canvaUser.user_id}, name=${canvaUser.display_name}`,
