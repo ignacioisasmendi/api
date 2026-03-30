@@ -5,6 +5,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import {
   CreatePublicationDto,
   BulkCreatePublicationDto,
@@ -82,9 +84,18 @@ export const PUBLICATION_FULL_INCLUDE = {
 export class PublicationService {
   private readonly logger = new Logger(PublicationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
+  ) {}
 
   async createPublication(dto: CreatePublicationDto, clientId: string) {
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanSchedulePublication(clientId, user.plan);
+    }
+
     // Parallel validation — avoids two sequential round-trips to the DB
     const [content, socialAccount, campaign] = await Promise.all([
       this.prisma.content.findFirst({

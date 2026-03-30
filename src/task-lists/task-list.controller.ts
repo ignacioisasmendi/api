@@ -17,8 +17,10 @@ import {
   ReorderTaskListsDto,
 } from './dto/task-list.dto';
 import { GetClientId } from '../decorators/get-client-id.decorator';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('task-boards/:boardId/lists')
+@RequireFeature('taskBoards')
 export class TaskListController {
   constructor(private readonly taskListService: TaskListService) {}
 

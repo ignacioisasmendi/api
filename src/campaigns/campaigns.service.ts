@@ -1,13 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import { CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
 import { PaginatedResponse, PaginationDto } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class CampaignsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
+  ) {}
 
   async create(clientId: string, dto: CreateCampaignDto) {
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanCreateCampaign(clientId, user.plan);
+    }
+
     return this.prisma.campaign.create({
       data: {
         clientId,

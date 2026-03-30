@@ -1,10 +1,27 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsArray } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UserPlan, UserStatus } from '@prisma/client';
 
 export class AdminUsersQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+export class UpdateUserPlanDto {
+  @IsEnum(UserPlan)
+  plan: UserPlan;
+}
+
+export class UpdateUserStatusDto {
+  @IsEnum(UserStatus)
+  status: UserStatus;
+}
+
+export class InviteBulkDto {
+  @IsArray()
+  @IsString({ each: true })
+  ids: string[];
 }
 
 export interface AdminTotals {
@@ -33,6 +50,8 @@ export interface AdminUserListItem {
   email: string;
   name: string | null;
   avatar: string | null;
+  plan: UserPlan;
+  status: UserStatus;
   createdAt: Date;
   _count: {
     clients: number;
@@ -46,6 +65,8 @@ export interface AdminUserDetail {
   email: string;
   name: string | null;
   avatar: string | null;
+  plan: UserPlan;
+  status: UserStatus;
   createdAt: Date;
   clients: {
     id: string;
@@ -68,6 +89,7 @@ export interface AdminUserDetail {
 export interface AdminWaitlistEntry {
   id: string;
   email: string;
+  invitedAt: Date | null;
   createdAt: Date;
 }
 

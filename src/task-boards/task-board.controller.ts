@@ -12,8 +12,10 @@ import {
 import { TaskBoardService } from './task-board.service';
 import { CreateTaskBoardDto, UpdateTaskBoardDto } from './dto/task-board.dto';
 import { GetClientId } from '../decorators/get-client-id.decorator';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('task-boards')
+@RequireFeature('taskBoards')
 export class TaskBoardController {
   constructor(private readonly taskBoardService: TaskBoardService) {}
 

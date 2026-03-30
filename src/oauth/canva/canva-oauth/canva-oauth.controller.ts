@@ -12,6 +12,7 @@ import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { CanvaOauthCallbackDto } from './dto/canva-oauth-callback.dto';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
+import { PlanService } from '../../../plans/plan.service';
 
 @Controller('/auth/canva')
 export class CanvaOauthController {
@@ -21,6 +22,7 @@ export class CanvaOauthController {
     private readonly canvaOauthService: CanvaOauthService,
     private readonly prismaService: PrismaService,
     private readonly encryptionService: EncryptionService,
+    private readonly planService: PlanService,
   ) {}
 
   /**
@@ -38,6 +40,9 @@ export class CanvaOauthController {
       `[handleCallback] START — userId=${user?.id}, clientId=${clientId}, ` +
         `code=${body.code?.substring(0, 8)}…, codeVerifier length=${body.codeVerifier?.length}`,
     );
+
+    // 0. Check plan limit before connecting a new social account
+    await this.planService.assertCanConnectSocialAccount(clientId, user.plan);
 
     // 1. Exchange code for tokens using the client-side PKCE code_verifier
     let tokenData: Awaited<

@@ -8,6 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { UserService } from './user.service';
+import { PlanService } from '../plans/plan.service';
 import { GetUser } from '../decorators/get-user.decorator';
 import { GetClientId } from '../decorators';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -15,7 +16,10 @@ import { User } from '@prisma/client';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly planService: PlanService,
+  ) {}
 
   /**
    * Obtener el perfil del usuario autenticado
@@ -24,6 +28,18 @@ export class UserController {
   @Get('me')
   async getProfile(@GetUser() user: User) {
     return this.userService.mapToResponse(user);
+  }
+
+  /**
+   * Get current user's plan usage vs limits
+   * GET /users/me/usage
+   */
+  @Get('me/usage')
+  async getUsage(
+    @GetUser() user: User,
+    @GetClientId() clientId: string,
+  ) {
+    return this.planService.getUserUsage(user.id, clientId, user.plan);
   }
 
   /**

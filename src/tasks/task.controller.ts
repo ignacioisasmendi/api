@@ -21,8 +21,10 @@ import {
   AddTaskDependencyDto,
 } from './dto/task.dto';
 import { GetClientId } from '../decorators/get-client-id.decorator';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('task-boards/:boardId')
+@RequireFeature('taskBoards')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 

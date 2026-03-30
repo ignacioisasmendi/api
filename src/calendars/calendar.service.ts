@@ -5,6 +5,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import { CreateCalendarDto, UpdateCalendarDto } from './dto/calendar.dto';
 import { Prisma } from '@prisma/client';
 
@@ -37,13 +39,22 @@ type CalendarBasic = Prisma.CalendarGetPayload<{
 export class CalendarService {
   private readonly logger = new Logger(CalendarService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
+  ) {}
 
   async createCalendar(
     dto: CreateCalendarDto,
     userId: string,
     clientId: string,
   ): Promise<CalendarBasic> {
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanCreateCalendar(clientId, user.plan);
+    }
+
     const calendar = await this.prisma.calendar.create({
       data: {
         userId,

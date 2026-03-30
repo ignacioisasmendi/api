@@ -1,12 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User } from '@prisma/client';
+import { User, UserPlan, UserStatus } from '@prisma/client';
 
 export interface UserResponse {
   id: string;
   email: string;
   name: string | null;
   avatar: string | null;
+  plan: UserPlan;
+  status: UserStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,21 +60,50 @@ export class UserService {
         return user;
       }
 
-      // Usuario no existe - crear nuevo con un client por defecto
+      // Usuario no existe - crear nuevo with waitlist-aware plan/status
       this.logger.log(
         `Creating new user for Auth0 ID: ${userData.auth0UserId}`,
       );
+
+      // Check if the email is on the waitlist
+      const waitlistEntry = await this.prisma.waitlistEntry.findUnique({
+        where: { email: userData.email },
+      });
+
+      let plan: UserPlan = UserPlan.FREE;
+      let status: UserStatus = UserStatus.WAITLISTED;
+
+      if (waitlistEntry?.invitedAt) {
+        // Invited from waitlist → BETA plan, ACTIVE
+        plan = UserPlan.BETA;
+        status = UserStatus.ACTIVE;
+      } else if (waitlistEntry) {
+        // On waitlist but not yet invited → WAITLISTED
+        plan = UserPlan.FREE;
+        status = UserStatus.WAITLISTED;
+      } else {
+        // Not on waitlist — during closed beta, default to WAITLISTED
+        // After public launch, change this to ACTIVE
+        plan = UserPlan.FREE;
+        status = UserStatus.WAITLISTED;
+      }
+
       user = await this.prisma.user.create({
         data: {
           auth0UserId: userData.auth0UserId,
           email: userData.email,
           name: userData.name,
           avatar: userData.avatar,
-          clients: {
-            create: {
-              name: userData.name || userData.email.split('@')[0],
+          plan,
+          status,
+          // Only create a default client for active users
+          ...(status === UserStatus.ACTIVE && {
+            clients: {
+              create: {
+                name: userData.name || userData.email.split('@')[0],
+              },
             },
-          },
+          }),
         },
       });
 
@@ -113,6 +144,8 @@ export class UserService {
       email: user.email,
       name: user.name,
       avatar: user.avatar,
+      plan: user.plan,
+      status: user.status,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

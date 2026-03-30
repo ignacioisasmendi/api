@@ -7,6 +7,7 @@ import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { IgOauthCallbackDto } from './dto/ig-oauth-callback.dto';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
+import { PlanService } from '../../../plans/plan.service';
 
 @Controller('/auth/instagram')
 export class IgOauthController {
@@ -14,6 +15,7 @@ export class IgOauthController {
     private readonly igOauthService: IgOauthService,
     private readonly prismaService: PrismaService,
     private readonly encryptionService: EncryptionService,
+    private readonly planService: PlanService,
   ) {}
   /* 
   @Get('callback')
@@ -30,6 +32,9 @@ export class IgOauthController {
     @GetUser() user: User,
     @GetClientId() clientId: string,
   ) {
+    // 0. Check plan limit before connecting a new social account
+    await this.planService.assertCanConnectSocialAccount(clientId, user.plan);
+
     // 1. Exchange the authorization code for a short-lived token
     const tokenData = await this.igOauthService.exchangeCodeForToken(body.code);
 

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../shared/storage/storage.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { SaveLogoDto } from './dto/save-logo.dto';
@@ -17,9 +19,16 @@ export class ClientService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
   ) {}
 
   async createClient(dto: CreateClientDto, userId: string): Promise<Client> {
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanCreateClient(userId, user.plan);
+    }
+
     const client = await this.prisma.client.create({
       data: {
         userId,

@@ -9,8 +9,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
 import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('canva')
+@RequireFeature('canva')
 export class CanvaController {
   constructor(
     private readonly canvaService: CanvaService,

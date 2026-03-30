@@ -11,8 +11,10 @@ import {
 import { EngagementService } from './engagement.service';
 import { ReplyDto } from './dto/engagement.dto';
 import { GetClientId, IsPublic } from '../decorators';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('engagement')
+@RequireFeature('engagement')
 export class EngagementController {
   constructor(private readonly engagementService: EngagementService) {}
 

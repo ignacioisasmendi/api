@@ -5,6 +5,7 @@ import { GetUser, GetClientId } from 'src/decorators';
 import { User } from '@prisma/client';
 import { TkOauthCallbackDto } from './dto/tk-oauth-callback.dto';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
+import { PlanService } from '../../../plans/plan.service';
 
 @Controller('/auth/tiktok')
 export class TkOauthController {
@@ -13,6 +14,7 @@ export class TkOauthController {
     private readonly tkOauthService: TkOauthService,
     private readonly prismaService: PrismaService,
     private readonly encryptionService: EncryptionService,
+    private readonly planService: PlanService,
   ) {}
 
   @Post('callback')
@@ -21,6 +23,9 @@ export class TkOauthController {
     @GetUser() user: User,
     @GetClientId() clientId: string,
   ) {
+    // 0. Check plan limit before connecting a new social account
+    await this.planService.assertCanConnectSocialAccount(clientId, user.plan);
+
     // 1. Exchange the authorization code for tokens
     const tokenData = await this.tkOauthService.exchangeCodeForToken(body.code);
 

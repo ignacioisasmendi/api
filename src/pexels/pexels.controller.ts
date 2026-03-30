@@ -1,8 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { PexelsService } from './pexels.service';
 import { StockSearchDto } from './dto/stock-search.dto';
+import { RequireFeature } from '../plans/decorators/require-feature.decorator';
 
 @Controller('media/stock')
+@RequireFeature('pexels')
 export class PexelsController {
   constructor(private readonly pexels: PexelsService) {}
 

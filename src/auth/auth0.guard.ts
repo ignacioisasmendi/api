@@ -92,6 +92,14 @@ export class Auth0Guard implements CanActivate {
         avatar: picture,
       });
 
+      // Check user status — block suspended or waitlisted users
+      if (user.status === 'SUSPENDED') {
+        throw new UnauthorizedException('Account suspended');
+      }
+      if (user.status === 'WAITLISTED') {
+        throw new UnauthorizedException('Account not yet activated');
+      }
+
       // Guardar el usuario completo (de la BD) en el contexto de CLS
       this.cls.set('user', user);
 

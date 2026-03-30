@@ -13,6 +13,7 @@ import {
   AdminWaitlistGrowthPoint,
   AdminUsersQueryDto,
 } from './dto/admin.dto';
+import { UserPlan, UserStatus } from '@prisma/client';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
 
 @Injectable()
@@ -99,6 +100,8 @@ export class AdminService {
           email: true,
           name: true,
           avatar: true,
+          plan: true,
+          status: true,
           createdAt: true,
           _count: {
             select: {
@@ -131,6 +134,8 @@ export class AdminService {
         email: true,
         name: true,
         avatar: true,
+        plan: true,
+        status: true,
         createdAt: true,
         clients: {
           select: {
@@ -168,7 +173,7 @@ export class AdminService {
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, createdAt: true },
+        select: { id: true, email: true, invitedAt: true, createdAt: true },
       }),
       this.prisma.waitlistEntry.count(),
     ]);
@@ -203,6 +208,73 @@ export class AdminService {
     return days.map((day) => {
       const date = format(day, 'yyyy-MM-dd');
       return { date, signups: rowMap.get(date) ?? 0 };
+    });
+  }
+
+  async inviteWaitlistEntry(id: string) {
+    const entry = await this.prisma.waitlistEntry.findUniqueOrThrow({
+      where: { id },
+    });
+
+    // Set invitedAt on the waitlist entry
+    await this.prisma.waitlistEntry.update({
+      where: { id },
+      data: { invitedAt: new Date() },
+    });
+
+    // If a User with that email already exists, activate them with BETA plan
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: entry.email },
+    });
+
+    if (existingUser) {
+      await this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: { status: UserStatus.ACTIVE, plan: UserPlan.BETA },
+      });
+    }
+
+    return { success: true, email: entry.email };
+  }
+
+  async inviteBulk(ids: string[]) {
+    const results = await this.prisma.$transaction(async (tx) => {
+      const entries = await tx.waitlistEntry.findMany({
+        where: { id: { in: ids } },
+      });
+
+      // Mark all as invited
+      await tx.waitlistEntry.updateMany({
+        where: { id: { in: ids } },
+        data: { invitedAt: new Date() },
+      });
+
+      // Activate any existing users with those emails
+      const emails = entries.map((e) => e.email);
+      await tx.user.updateMany({
+        where: { email: { in: emails } },
+        data: { status: UserStatus.ACTIVE, plan: UserPlan.BETA },
+      });
+
+      return { invited: entries.length };
+    });
+
+    return results;
+  }
+
+  async updateUserPlan(userId: string, plan: UserPlan) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { plan },
+      select: { id: true, email: true, plan: true, status: true },
+    });
+  }
+
+  async updateUserStatus(userId: string, status: UserStatus) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { status },
+      select: { id: true, email: true, plan: true, status: true },
     });
   }
 

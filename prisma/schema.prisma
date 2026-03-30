@@ -12,6 +12,8 @@ model User {
   email          String          @unique
   name           String?
   avatar         String?
+  plan           UserPlan        @default(BETA)
+  status         UserStatus      @default(ACTIVE)
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
   calendars      Calendar[]
@@ -267,12 +269,27 @@ model Comment {
 }
 
 model WaitlistEntry {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  id        String    @id @default(cuid())
+  email     String    @unique
+  invitedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
 
   @@map("waitlist_entries")
+}
+
+enum UserPlan {
+  BETA
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum UserStatus {
+  WAITLISTED
+  ACTIVE
+  SUSPENDED
 }
 
 enum ContentFormat {

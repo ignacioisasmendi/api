@@ -1,8 +1,24 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
 import { SkipClientValidation } from '../decorators';
-import { AdminUsersQueryDto } from './dto/admin.dto';
+import {
+  AdminUsersQueryDto,
+  UpdateUserPlanDto,
+  UpdateUserStatusDto,
+  InviteBulkDto,
+} from './dto/admin.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('admin')
@@ -26,6 +42,22 @@ export class AdminController {
     return this.adminService.getUserDetail(id);
   }
 
+  @Patch('users/:id/plan')
+  updateUserPlan(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserPlanDto,
+  ) {
+    return this.adminService.updateUserPlan(id, dto.plan);
+  }
+
+  @Patch('users/:id/status')
+  updateUserStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
+    return this.adminService.updateUserStatus(id, dto.status);
+  }
+
   @Get('waitlist/growth')
   getWaitlistGrowth() {
     return this.adminService.getWaitlistGrowth();
@@ -34,5 +66,17 @@ export class AdminController {
   @Get('waitlist')
   getWaitlist(@Query() query: PaginationDto) {
     return this.adminService.getWaitlist(query);
+  }
+
+  @Post('waitlist/:id/invite')
+  @HttpCode(HttpStatus.OK)
+  inviteWaitlistEntry(@Param('id') id: string) {
+    return this.adminService.inviteWaitlistEntry(id);
+  }
+
+  @Post('waitlist/invite-bulk')
+  @HttpCode(HttpStatus.OK)
+  inviteBulk(@Body() dto: InviteBulkDto) {
+    return this.adminService.inviteBulk(dto.ids);
   }
 }

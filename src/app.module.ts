@@ -34,6 +34,8 @@ import { AdminModule } from './admin/admin.module';
 import { TaskBoardModule } from './task-boards/task-board.module';
 import { TaskListModule } from './task-lists/task-list.module';
 import { TaskModule } from './tasks/task.module';
+import { PlanModule } from './plans/plan.module';
+import { PlanFeatureGuard } from './plans/guards/plan-feature.guard';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
@@ -104,6 +106,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     TaskBoardModule,
     TaskListModule,
     TaskModule,
+    PlanModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {
@@ -126,6 +129,11 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     {
       provide: APP_GUARD,
       useClass: Auth0Guard,
+    },
+    // Plan feature guard — gates endpoints by user plan features
+    {
+      provide: APP_GUARD,
+      useClass: PlanFeatureGuard,
     },
     // Global rate limiting (configured above in ThrottlerModule)
     {

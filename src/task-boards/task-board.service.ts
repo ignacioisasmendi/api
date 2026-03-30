@@ -4,13 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import { CreateTaskBoardDto, UpdateTaskBoardDto } from './dto/task-board.dto';
 
 @Injectable()
 export class TaskBoardService {
   private readonly logger = new Logger(TaskBoardService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
+  ) {}
 
   async listBoards(clientId: string) {
     return this.prisma.taskBoard.findMany({
@@ -21,6 +27,11 @@ export class TaskBoardService {
   }
 
   async createBoard(clientId: string, dto: CreateTaskBoardDto) {
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanCreateTaskBoard(clientId, user.plan);
+    }
+
     const board = await this.prisma.taskBoard.create({
       data: {
         clientId,

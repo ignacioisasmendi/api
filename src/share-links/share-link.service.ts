@@ -5,6 +5,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlanService } from '../plans/plan.service';
+import { ClsService } from 'nestjs-cls';
 import { CreateShareLinkDto } from './dto/share-link.dto';
 import { SharePermission, Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
@@ -17,7 +19,11 @@ type ShareLinkWithMeta = Prisma.CalendarShareLinkGetPayload<{
 export class ShareLinkService {
   private readonly logger = new Logger(ShareLinkService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planService: PlanService,
+    private readonly cls: ClsService,
+  ) {}
 
   /**
    * Hash a raw token with SHA-256 for storage/lookup.
@@ -42,6 +48,12 @@ export class ShareLinkService {
     clientId: string,
     dto: CreateShareLinkDto,
   ): Promise<{ shareLink: ShareLinkWithMeta; rawToken: string }> {
+    // Plan limit check
+    const user = this.cls.get('user');
+    if (user) {
+      await this.planService.assertCanCreateShareLink(calendarId, user.plan);
+    }
+
     // Verify calendar ownership
     await this.verifyCalendarOwnership(calendarId, clientId);
 
