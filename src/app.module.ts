@@ -18,6 +18,7 @@ import { CanvaOauthModule } from './oauth/canva/canva-oauth/canva-oauth.module';
 import { CanvaModule } from './canva/canva.module';
 import { StorageModule } from './shared/storage/storage.module';
 import { EncryptionModule } from './shared/encryption/encryption.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { TiktokModule } from './tiktok/tiktok.module';
 import { CalendarModule } from './calendars/calendar.module';
 import { KanbanColumnModule } from './kanban-columns/kanban-column.module';
@@ -90,6 +91,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     CanvaModule,
     StorageModule,
     EncryptionModule,
+    AnalyticsModule,
     TiktokModule,
     CalendarModule,
     KanbanColumnModule,

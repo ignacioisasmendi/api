@@ -3,10 +3,12 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlanService } from '../plans/plan.service';
 import { ClsService } from 'nestjs-cls';
+import { ANALYTICS_PORT, AnalyticsPort } from '../analytics/analytics.port';
 import {
   CreatePublicationDto,
   BulkCreatePublicationDto,
@@ -88,6 +90,7 @@ export class PublicationService {
     private readonly prisma: PrismaService,
     private readonly planService: PlanService,
     private readonly cls: ClsService,
+    @Inject(ANALYTICS_PORT) private readonly analytics: AnalyticsPort,
   ) {}
 
   async createPublication(dto: CreatePublicationDto, clientId: string) {
@@ -163,6 +166,20 @@ export class PublicationService {
     this.logger.log(
       `Created publication ${publication.id} for ${socialAccount.platform}`,
     );
+
+    if (user) {
+      this.analytics
+        .track({
+          event: 'Publication Created',
+          userId: user.email,
+          properties: {
+            platform: socialAccount.platform,
+            has_campaign: !!dto.campaignId,
+          },
+        })
+        .catch(() => {});
+    }
+
     return publication;
   }
 

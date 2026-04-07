@@ -1,4 +1,4 @@
-import { Body, Controller, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Logger, Post, Inject } from '@nestjs/common';
 import { TkOauthService } from './tk-oauth.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GetUser, GetClientId } from 'src/decorators';
@@ -6,6 +6,7 @@ import { User } from '@prisma/client';
 import { TkOauthCallbackDto } from './dto/tk-oauth-callback.dto';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
 import { PlanService } from '../../../plans/plan.service';
+import { ANALYTICS_PORT, AnalyticsPort } from 'src/analytics/analytics.port';
 
 @Controller('/auth/tiktok')
 export class TkOauthController {
@@ -15,6 +16,7 @@ export class TkOauthController {
     private readonly prismaService: PrismaService,
     private readonly encryptionService: EncryptionService,
     private readonly planService: PlanService,
+    @Inject(ANALYTICS_PORT) private readonly analytics: AnalyticsPort,
   ) {}
 
   @Post('callback')
@@ -77,6 +79,14 @@ export class TkOauthController {
         metadata: { profilePictureUrl: tiktokUser.avatar_url ?? null },
       },
     });
+
+    this.analytics
+      .track({
+        event: 'Social Account Connected',
+        userId: user.email,
+        properties: { platform: 'TIKTOK', username: tiktokUser.display_name },
+      })
+      .catch(() => {});
 
     return { success: true };
   }

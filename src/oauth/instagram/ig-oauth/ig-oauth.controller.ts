@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res, Inject } from '@nestjs/common';
 import { IgOauthService } from './ig-oauth.service';
 import { IsPublic } from 'src/decorators/public.decorator';
 import type { Request, Response } from 'express';
@@ -8,6 +8,7 @@ import { User } from '@prisma/client';
 import { IgOauthCallbackDto } from './dto/ig-oauth-callback.dto';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
 import { PlanService } from '../../../plans/plan.service';
+import { ANALYTICS_PORT, AnalyticsPort } from 'src/analytics/analytics.port';
 
 @Controller('/auth/instagram')
 export class IgOauthController {
@@ -16,6 +17,7 @@ export class IgOauthController {
     private readonly prismaService: PrismaService,
     private readonly encryptionService: EncryptionService,
     private readonly planService: PlanService,
+    @Inject(ANALYTICS_PORT) private readonly analytics: AnalyticsPort,
   ) {}
   /* 
   @Get('callback')
@@ -85,6 +87,14 @@ export class IgOauthController {
         metadata: { profilePictureUrl: instagramUser.profile_picture_url ?? null },
       },
     });
+
+    this.analytics
+      .track({
+        event: 'Social Account Connected',
+        userId: user.email,
+        properties: { platform: 'INSTAGRAM', username: instagramUser.username },
+      })
+      .catch(() => {});
 
     return { success: true };
   }

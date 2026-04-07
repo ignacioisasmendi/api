@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, UserPlan, UserStatus } from '@prisma/client';
+import { ANALYTICS_PORT, AnalyticsPort } from '../analytics/analytics.port';
 
 export interface UserResponse {
   id: string;
@@ -24,7 +25,10 @@ export interface CreateUserData {
 export class UserService {
   private readonly logger = new Logger(UserService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ANALYTICS_PORT) private readonly analytics: AnalyticsPort,
+  ) {}
 
   /**
    * Encuentra o crea un usuario basado en su auth0UserId
@@ -110,6 +114,25 @@ export class UserService {
       this.logger.log(
         `New user created with ID: ${user.id} (with default client)`,
       );
+
+      this.analytics
+        .identify({
+          userId: user.email,
+          email: user.email,
+          name: user.name ?? undefined,
+          plan: user.plan,
+          createdAt: user.createdAt,
+        })
+        .catch(() => {});
+
+      this.analytics
+        .track({
+          event: 'User Signed Up',
+          userId: user.email,
+          properties: { plan: user.plan, status: user.status },
+        })
+        .catch(() => {});
+
       return user;
     } catch (error) {
       this.logger.error('Error in findOrCreateUser', error);
