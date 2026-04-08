@@ -11,6 +11,7 @@ import {
   PublishResult,
 } from './interfaces/platform-publisher.interface';
 import { TiktokPostService } from '../tiktok/post/tiktok-post.service';
+import { TiktokCreatorService } from '../tiktok/creator/tiktok-creator.service';
 import { InitDirectPostDto } from '../tiktok/post/dto/init-direct-post.dto';
 import {
   TikTokPrivacyLevel,
@@ -19,12 +20,20 @@ import {
 import { isFileUploadInitData } from '../tiktok/tiktok.types';
 import { EncryptionService } from '../shared/encryption/encryption.service';
 
+const PRIVACY_LEVEL_PREFERENCE: TikTokPrivacyLevel[] = [
+  TikTokPrivacyLevel.SELF_ONLY,
+  TikTokPrivacyLevel.FOLLOWER_OF_CREATOR,
+  TikTokPrivacyLevel.MUTUAL_FOLLOW_FRIENDS,
+  TikTokPrivacyLevel.PUBLIC_TO_EVERYONE,
+];
+
 @Injectable()
 export class TikTokPublisher implements IPlatformPublisher {
   private readonly logger = new Logger(TikTokPublisher.name);
 
   constructor(
     private readonly tiktokPostService: TiktokPostService,
+    private readonly tiktokCreatorService: TiktokCreatorService,
     private readonly encryptionService: EncryptionService,
   ) {}
 
@@ -124,16 +133,24 @@ export class TikTokPublisher implements IPlatformPublisher {
     );
 
     try {
-      // 1. Download video from R2 to a local temp file
+      // 1. Query creator info to validate supported privacy levels
+      const requestedLevel =
+        (platformConfig?.privacy_level as TikTokPrivacyLevel) ??
+        TikTokPrivacyLevel.SELF_ONLY;
+
+      const privacyLevel = await this.resolvePrivacyLevel(
+        accessToken,
+        requestedLevel,
+      );
+
+      // 2. Download video from R2 to a local temp file
       await this.downloadToTemp(videoMedia.url, tempFilePath);
       const fileSize = fs.statSync(tempFilePath).size;
 
-      // 2. Build the DTO using stored platformConfig settings
+      // 3. Build the DTO using stored platformConfig settings
       const dto = new InitDirectPostDto();
       dto.title = caption.substring(0, 150);
-      dto.privacy_level =
-        (platformConfig?.privacy_level as TikTokPrivacyLevel) ??
-        TikTokPrivacyLevel.SELF_ONLY;
+      dto.privacy_level = privacyLevel;
       dto.disable_comment =
         (platformConfig?.disable_comment as boolean) ?? false;
       dto.disable_duet = (platformConfig?.disable_duet as boolean) ?? false;
@@ -142,13 +159,13 @@ export class TikTokPublisher implements IPlatformPublisher {
       dto.source_type = TikTokSourceType.FILE_UPLOAD;
       dto.video_size = fileSize;
 
-      // 3. Initialize the direct post
+      // 4. Initialize the direct post
       const initData = await this.tiktokPostService.initDirectPost(
         accessToken,
         dto,
       );
 
-      // 4. Upload the video bytes to TikTok's upload URL
+      // 5. Upload the video bytes to TikTok's upload URL
       if (!isFileUploadInitData(initData)) {
         throw new Error('Expected upload_url in FILE_UPLOAD response');
       }
@@ -185,6 +202,43 @@ export class TikTokPublisher implements IPlatformPublisher {
       } catch (err) {
         this.logger.warn(`Failed to clean up temp file: ${tempFilePath}`, err);
       }
+    }
+  }
+
+  /**
+   * Query the creator's supported privacy levels and return a valid one.
+   * Falls back through PRIVACY_LEVEL_PREFERENCE if the requested level
+   * is not supported, ultimately defaulting to SELF_ONLY.
+   */
+  private async resolvePrivacyLevel(
+    accessToken: string,
+    requested: TikTokPrivacyLevel,
+  ): Promise<TikTokPrivacyLevel> {
+    try {
+      const creatorInfo =
+        await this.tiktokCreatorService.queryCreatorInfo(accessToken);
+
+      const supported = creatorInfo.privacy_level_options;
+
+      if (supported.includes(requested)) {
+        return requested;
+      }
+
+      this.logger.warn(
+        `Requested privacy level "${requested}" not supported by this account (supported: ${supported.join(', ')}). Falling back.`,
+      );
+
+      const fallback =
+        PRIVACY_LEVEL_PREFERENCE.find((level) => supported.includes(level)) ??
+        TikTokPrivacyLevel.SELF_ONLY;
+
+      this.logger.log(`Using fallback privacy level: "${fallback}"`);
+      return fallback;
+    } catch (err) {
+      this.logger.warn(
+        `Failed to query creator info, defaulting to SELF_ONLY: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+      return TikTokPrivacyLevel.SELF_ONLY;
     }
   }
 

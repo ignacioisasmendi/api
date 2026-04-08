@@ -136,7 +136,6 @@ export class TiktokPostService {
       );
       response = data;
     } catch (err: any) {
-      // Log TikTok's response body so the real error code is visible in logs
       const status = err?.response?.status;
       const tiktokError = err?.response?.data;
       this.logger.error(
@@ -147,7 +146,16 @@ export class TiktokPostService {
         },
         `TikTok direct post init HTTP error (${status})`,
       );
-      throw err;
+
+      const tiktokMsg =
+        tiktokError?.error?.message ?? tiktokError?.message ?? '';
+      const tiktokCode = tiktokError?.error?.code ?? '';
+      const detail = [tiktokCode, tiktokMsg].filter(Boolean).join(' – ');
+      const enriched = new Error(
+        `TikTok init failed (HTTP ${status})${detail ? `: ${detail}` : ''}`,
+      );
+      (enriched as any).cause = err;
+      throw enriched;
     }
 
     if (response.error.code !== TIKTOK_ERROR_CODES.OK) {
