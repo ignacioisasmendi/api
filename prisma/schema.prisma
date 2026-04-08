@@ -23,6 +23,7 @@ model User {
   oauthStates    OAuthState[]
   socialAccounts  SocialAccount[]
   feedbackReports FeedbackReport[]
+  drafts          Draft[]
 }
 
 model Client {
@@ -40,6 +41,7 @@ model Client {
   contents       Content[]
   socialAccounts SocialAccount[]
   taskBoards     TaskBoard[]
+  drafts         Draft[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -205,6 +207,7 @@ model Calendar {
   comments      Comment[]
   contents      Content[]
   kanbanColumns KanbanColumn[]
+  drafts        Draft[]
 
   @@index([userId])
   @@index([clientId])
@@ -350,6 +353,40 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum DraftObjective {
+  SELL
+  EDUCATE
+  ENTERTAIN
+  INFORM
+}
+
+model Draft {
+  id                String          @id @default(cuid())
+  userId            String
+  clientId          String
+  calendarId        String?
+  title             String
+  date              DateTime        @db.Timestamptz(3)
+  platforms         Platform[]
+  contentType       ContentFormat?
+  objective         DraftObjective?
+  caption           String?
+  notes             String?
+  referenceUrl      String?
+  referenceImageUrl String?
+  referenceImageKey String?
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamptz(3)
+
+  calendar          Calendar?       @relation(fields: [calendarId], references: [id])
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([calendarId])
+  @@index([date])
 }
 
 model FeedbackReport {
