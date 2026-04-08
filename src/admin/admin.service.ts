@@ -189,6 +189,13 @@ export class AdminService {
     };
   }
 
+  async getWaitlistExport(): Promise<AdminWaitlistEntry[]> {
+    return this.prisma.waitlistEntry.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, email: true, invitedAt: true, createdAt: true },
+    });
+  }
+
   async getWaitlistGrowth(): Promise<AdminWaitlistGrowthPoint[]> {
     const rows: { date: string; count: number }[] =
       await this.prisma.$queryRaw`

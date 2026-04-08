@@ -67,6 +67,11 @@ export class AdminController {
     return this.adminService.updateUserStatus(id, dto.status);
   }
 
+  @Get('waitlist/export')
+  getWaitlistExport() {
+    return this.adminService.getWaitlistExport();
+  }
+
   @Get('waitlist/growth')
   getWaitlistGrowth() {
     return this.adminService.getWaitlistGrowth();
