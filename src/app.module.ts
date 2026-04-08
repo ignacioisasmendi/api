@@ -36,6 +36,7 @@ import { TaskBoardModule } from './task-boards/task-board.module';
 import { TaskListModule } from './task-lists/task-list.module';
 import { TaskModule } from './tasks/task.module';
 import { PlanModule } from './plans/plan.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { PlanFeatureGuard } from './plans/guards/plan-feature.guard';
 import { ClientInterceptor } from './interceptors/client.interceptor';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
@@ -109,6 +110,7 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     TaskListModule,
     TaskModule,
     PlanModule,
+    FeedbackModule,
     // Rate limiting: default is generous for authenticated endpoints
     ThrottlerModule.forRoot([
       {

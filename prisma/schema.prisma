@@ -21,7 +21,8 @@ model User {
   comments       Comment[]
   contents       Content[]
   oauthStates    OAuthState[]
-  socialAccounts SocialAccount[]
+  socialAccounts  SocialAccount[]
+  feedbackReports FeedbackReport[]
 }
 
 model Client {
@@ -331,11 +332,43 @@ enum SharePermission {
   VIEW_AND_COMMENT
 }
 
+enum FeedbackType {
+  BUG
+  SUGGESTION
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 enum TaskPriority {
   LOW
   MEDIUM
   HIGH
   URGENT
+}
+
+model FeedbackReport {
+  id            String         @id @default(cuid())
+  userId        String
+  clientId      String?
+  type          FeedbackType
+  message       String
+  screenshotUrl String?
+  status        FeedbackStatus @default(OPEN)
+  adminResponse String?
+  respondedAt   DateTime?      @db.Timestamptz(3)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model TaskBoard {

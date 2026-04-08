@@ -20,12 +20,21 @@ import {
   InviteBulkDto,
 } from './dto/admin.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { FeedbackService } from '../feedback/feedback.service';
+import {
+  AdminFeedbackQueryDto,
+  UpdateFeedbackStatusDto,
+  RespondFeedbackDto,
+} from '../feedback/dto/feedback.dto';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
 @SkipClientValidation()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly feedbackService: FeedbackService,
+  ) {}
 
   @Get('overview')
   getOverview() {
@@ -78,5 +87,32 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   inviteBulk(@Body() dto: InviteBulkDto) {
     return this.adminService.inviteBulk(dto.ids);
+  }
+
+  @Get('feedback')
+  listFeedback(@Query() query: AdminFeedbackQueryDto) {
+    return this.feedbackService.findAllAdmin(query);
+  }
+
+  @Get('feedback/:id')
+  getFeedbackDetail(@Param('id') id: string) {
+    return this.feedbackService.findOneAdmin(id);
+  }
+
+  @Patch('feedback/:id/status')
+  updateFeedbackStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateFeedbackStatusDto,
+  ) {
+    return this.feedbackService.updateStatus(id, dto.status);
+  }
+
+  @Post('feedback/:id/respond')
+  @HttpCode(HttpStatus.OK)
+  respondToFeedback(
+    @Param('id') id: string,
+    @Body() dto: RespondFeedbackDto,
+  ) {
+    return this.feedbackService.respond(id, dto.adminResponse);
   }
 }
