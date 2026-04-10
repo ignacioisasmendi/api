@@ -12,13 +12,8 @@ import { Type } from 'class-transformer';
 import { SharePermission } from '@prisma/client';
 
 const SHARE_STATUS_VALUES = ['draft', 'scheduled', 'published'] as const;
-const SHARE_MODE_VALUES = ['CALENDAR', 'DASHBOARD'] as const;
 
 export class ShareFilterScopeDto {
-  @IsIn(SHARE_MODE_VALUES)
-  @IsOptional()
-  mode?: (typeof SHARE_MODE_VALUES)[number];
-
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

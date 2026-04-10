@@ -18,7 +18,6 @@ import { SharePermission } from '@prisma/client';
 const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 interface ShareFilterScope {
-  mode: 'CALENDAR' | 'DASHBOARD';
   platforms: string[];
   statuses: string[];
 }
@@ -38,7 +37,6 @@ export class PublicShareService {
     }
 
     const scope = filterScope as {
-      mode?: unknown;
       platforms?: unknown;
       statuses?: unknown;
     };
@@ -65,13 +63,11 @@ export class PublicShareService {
         )
       : [];
 
-    const mode = scope.mode === 'DASHBOARD' ? 'DASHBOARD' : 'CALENDAR';
-
-    if (platforms.length === 0 && statuses.length === 0 && mode === 'CALENDAR') {
+    if (platforms.length === 0 && statuses.length === 0) {
       return null;
     }
 
-    return { mode, platforms, statuses };
+    return { platforms, statuses };
   }
 
   /**
@@ -92,13 +88,12 @@ export class PublicShareService {
 
     const scope = this.parseFilterScope(link.filterScope);
 
-    const isDashboardShare = scope?.mode === 'DASHBOARD';
     const hasPlatformFilter = (scope?.platforms.length ?? 0) > 0;
     const hasStatusFilter = (scope?.statuses.length ?? 0) > 0;
 
     const clientId = link.calendar.clientId;
 
-    // Fetch calendar metadata (name, description, owner, kanban columns)
+    // Fetch calendar metadata (name, description, owner)
     const calendarMeta = await this.prisma.calendar.findUnique({
       where: { id: link.calendarId },
       select: {
@@ -107,19 +102,6 @@ export class PublicShareService {
         description: true,
         user: {
           select: { name: true },
-        },
-        kanbanColumns: {
-          select: {
-            id: true,
-            calendarId: true,
-            name: true,
-            order: true,
-            mappedStatus: true,
-            color: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-          orderBy: { order: 'asc' },
         },
       },
     });
@@ -187,25 +169,23 @@ export class PublicShareService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Only include drafts for dashboard (kanban board) view
-    const drafts = isDashboardShare
-      ? await this.prisma.draft.findMany({
-          where: { clientId },
-          select: {
-            id: true,
-            title: true,
-            date: true,
-            platforms: true,
-            contentType: true,
-            objective: true,
-            caption: true,
-            notes: true,
-            referenceUrl: true,
-            referenceImageUrl: true,
-          },
-          orderBy: { date: 'asc' },
-        })
-      : [];
+    // Always include drafts so clients can review and approve all planned content
+    const drafts = await this.prisma.draft.findMany({
+      where: { clientId },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        platforms: true,
+        contentType: true,
+        objective: true,
+        caption: true,
+        notes: true,
+        referenceUrl: true,
+        referenceImageUrl: true,
+      },
+      orderBy: { date: 'asc' },
+    });
 
     const calendar = { ...calendarMeta, contents, drafts };
 
@@ -265,12 +245,10 @@ export class PublicShareService {
     this.assertValidLink(resolved);
 
     const { link } = resolved;
-    const scope = this.parseFilterScope(link!.filterScope);
-    const isDashboardShare = scope?.mode === 'DASHBOARD';
 
     const comments = await this.prisma.comment.findMany({
       where: {
-        ...(isDashboardShare ? { shareLinkId: link!.id } : { calendarId: link!.calendarId }),
+        calendarId: link!.calendarId,
         isResolved: false,
         ...(publicationId && { publicationId }),
         ...(cursor && { createdAt: { lt: new Date(cursor) } }),
@@ -316,21 +294,17 @@ export class PublicShareService {
     this.assertValidLink(resolved);
 
     const { link } = resolved;
-    const scope = this.parseFilterScope(link!.filterScope);
-    const isDashboardShare = scope?.mode === 'DASHBOARD';
 
     if (link!.permission !== SharePermission.VIEW_AND_COMMENT) {
       throw new ForbiddenException('This link does not allow commenting');
     }
 
-    // If publicationId is provided, verify it belongs to this calendar
+    // If publicationId is provided, verify it belongs to this client
     if (dto.publicationId) {
       const publication = await this.prisma.publication.findFirst({
         where: {
           id: dto.publicationId,
-          content: isDashboardShare
-            ? { clientId: link!.calendar.clientId }
-            : { calendarId: link!.calendarId },
+          content: { clientId: link!.calendar.clientId },
         },
       });
 

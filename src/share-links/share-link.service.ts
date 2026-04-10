@@ -53,13 +53,11 @@ export class ShareLinkService {
         )
       : [];
 
-    const mode = filterScope.mode === 'DASHBOARD' ? 'DASHBOARD' : 'CALENDAR';
-
-    if (platforms.length === 0 && statuses.length === 0 && mode === 'CALENDAR') {
+    if (platforms.length === 0 && statuses.length === 0) {
       return undefined;
     }
 
-    return { mode, platforms, statuses };
+    return { platforms, statuses };
   }
 
   /**
