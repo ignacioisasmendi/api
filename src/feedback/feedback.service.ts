@@ -18,9 +18,9 @@ export class FeedbackService {
     private readonly storage: StorageService,
   ) {}
 
-  private async resolveScreenshotUrl<T extends { screenshotUrl: string | null }>(
-    report: T,
-  ): Promise<T> {
+  private async resolveScreenshotUrl<
+    T extends { screenshotUrl: string | null },
+  >(report: T): Promise<T> {
     if (!report.screenshotUrl) return report;
     const key = report.screenshotUrl;
     if (key.startsWith('http')) return report;
@@ -31,13 +31,17 @@ export class FeedbackService {
     return { ...report, screenshotUrl: signedUrl };
   }
 
-  private async resolveScreenshotUrls<T extends { screenshotUrl: string | null }>(
-    reports: T[],
-  ): Promise<T[]> {
+  private async resolveScreenshotUrls<
+    T extends { screenshotUrl: string | null },
+  >(reports: T[]): Promise<T[]> {
     return Promise.all(reports.map((r) => this.resolveScreenshotUrl(r)));
   }
 
-  async create(userId: string, clientId: string | null, dto: CreateFeedbackDto) {
+  async create(
+    userId: string,
+    clientId: string | null,
+    dto: CreateFeedbackDto,
+  ) {
     const report = await this.prisma.feedbackReport.create({
       data: {
         userId,
@@ -108,7 +112,9 @@ export class FeedbackService {
     const [rawData, total] = await Promise.all([
       this.prisma.feedbackReport.findMany({
         where,
-        include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+        include: {
+          user: { select: { id: true, email: true, name: true, avatar: true } },
+        },
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip,
@@ -132,7 +138,9 @@ export class FeedbackService {
   async findOneAdmin(id: string) {
     const report = await this.prisma.feedbackReport.findUnique({
       where: { id },
-      include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+      include: {
+        user: { select: { id: true, email: true, name: true, avatar: true } },
+      },
     });
 
     if (!report) {
@@ -148,7 +156,9 @@ export class FeedbackService {
     const updated = await this.prisma.feedbackReport.update({
       where: { id },
       data: { status },
-      include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+      include: {
+        user: { select: { id: true, email: true, name: true, avatar: true } },
+      },
     });
     return this.resolveScreenshotUrl(updated);
   }
@@ -163,7 +173,9 @@ export class FeedbackService {
         respondedAt: new Date(),
         status: FeedbackStatus.IN_PROGRESS,
       },
-      include: { user: { select: { id: true, email: true, name: true, avatar: true } } },
+      include: {
+        user: { select: { id: true, email: true, name: true, avatar: true } },
+      },
     });
     return this.resolveScreenshotUrl(updated);
   }

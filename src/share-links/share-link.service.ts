@@ -26,6 +26,43 @@ export class ShareLinkService {
   ) {}
 
   /**
+   * Normalize incoming share filters for stable storage and matching.
+   */
+  private normalizeFilterScope(
+    filterScope?: CreateShareLinkDto['filterScope'],
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+    if (!filterScope) return undefined;
+
+    const platforms = Array.isArray(filterScope.platforms)
+      ? Array.from(
+          new Set(
+            filterScope.platforms
+              .map((value) => value.toLowerCase().trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
+
+    const statuses = Array.isArray(filterScope.statuses)
+      ? Array.from(
+          new Set(
+            filterScope.statuses
+              .map((value) => value.toLowerCase().trim())
+              .filter(Boolean),
+          ),
+        )
+      : [];
+
+    const mode = filterScope.mode === 'DASHBOARD' ? 'DASHBOARD' : 'CALENDAR';
+
+    if (platforms.length === 0 && statuses.length === 0 && mode === 'CALENDAR') {
+      return undefined;
+    }
+
+    return { mode, platforms, statuses };
+  }
+
+  /**
    * Hash a raw token with SHA-256 for storage/lookup.
    */
   private hashToken(rawToken: string): string {
@@ -59,6 +96,7 @@ export class ShareLinkService {
 
     const rawToken = this.generateToken();
     const tokenHash = this.hashToken(rawToken);
+    const filterScope = this.normalizeFilterScope(dto.filterScope);
 
     const shareLink = await this.prisma.calendarShareLink.create({
       data: {
@@ -67,6 +105,7 @@ export class ShareLinkService {
         permission: dto.permission || SharePermission.VIEW_AND_COMMENT,
         label: dto.label,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+        ...(filterScope ? { filterScope } : {}),
       },
       include: {
         _count: { select: { comments: true } },
@@ -153,29 +192,33 @@ export class ShareLinkService {
     const rawToken = this.generateToken();
     const tokenHash = this.hashToken(rawToken);
 
-    const [, newLink] = await this.prisma.$transaction([
-      // Revoke old link
-      this.prisma.calendarShareLink.update({
+    const newLink = await this.prisma.$transaction(async (tx) => {
+      await tx.calendarShareLink.update({
         where: { id: linkId },
         data: {
           isActive: false,
           revokedAt: new Date(),
         },
-      }),
-      // Create new link with same settings
-      this.prisma.calendarShareLink.create({
+      });
+
+      return tx.calendarShareLink.create({
         data: {
           calendarId,
           tokenHash,
           permission: oldLink.permission,
           label: oldLink.label,
           expiresAt: oldLink.expiresAt,
+          ...(oldLink.filterScope !== null
+            ? {
+                filterScope: oldLink.filterScope as Prisma.InputJsonValue,
+              }
+            : {}),
         },
         include: {
           _count: { select: { comments: true } },
         },
-      }),
-    ]);
+      });
+    });
 
     this.logger.log(`ShareLink regenerated: old=${linkId} new=${newLink.id}`);
 

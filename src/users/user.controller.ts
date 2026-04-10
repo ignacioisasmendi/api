@@ -35,10 +35,7 @@ export class UserController {
    * GET /users/me/usage
    */
   @Get('me/usage')
-  async getUsage(
-    @GetUser() user: User,
-    @GetClientId() clientId: string,
-  ) {
+  async getUsage(@GetUser() user: User, @GetClientId() clientId: string) {
     return this.planService.getUserUsage(user.id, clientId, user.plan);
   }
 

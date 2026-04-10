@@ -8,6 +8,12 @@ export class AdminUsersQueryDto extends PaginationDto {
   search?: string;
 }
 
+export class AdminWaitlistQueryDto extends PaginationDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
 export class UpdateUserPlanDto {
   @IsEnum(UserPlan)
   plan: UserPlan;

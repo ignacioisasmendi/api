@@ -11,10 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../shared/storage/storage.service';
 import { ReorderMediaDto } from './dto/reorder-media.dto';
 import { MediaResponseDto } from './dto/media-response.dto';
-import {
-  PaginationDto,
-  PaginatedResponse,
-} from '../common/dto/pagination.dto';
+import { PaginationDto, PaginatedResponse } from '../common/dto/pagination.dto';
 
 const ALLOWED_IMAGE_TYPES = new Set([
   'image/jpeg',

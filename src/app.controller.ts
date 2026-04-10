@@ -15,9 +15,9 @@ export class AppController {
   }
 
   @IsPublic()
-  @Get("/debug-sentry")
+  @Get('/debug-sentry')
   getError() {
-    throw new Error("My first Sentry error!");
+    throw new Error('My first Sentry error!');
   }
 
   @Get('me')

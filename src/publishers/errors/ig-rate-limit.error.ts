@@ -5,8 +5,7 @@ export class IgRateLimitError extends Error {
     message?: string,
   ) {
     super(
-      message ??
-        `Instagram rate limit reached for account ${platformUserId}`,
+      message ?? `Instagram rate limit reached for account ${platformUserId}`,
     );
     this.name = 'IgRateLimitError';
   }

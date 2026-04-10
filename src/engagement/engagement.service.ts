@@ -56,7 +56,6 @@ interface IgMediaListResponse {
   data: IgMediaItem[];
 }
 
-
 @Injectable()
 export class EngagementService {
   private readonly logger = new Logger(EngagementService.name);
@@ -170,12 +169,20 @@ export class EngagementService {
    * Remove this endpoint once no longer needed.
    */
   async debugToken(accountId: string, clientId: string) {
-    const { token } = await this.insightsService.getValidToken(accountId, clientId);
+    const { token } = await this.insightsService.getValidToken(
+      accountId,
+      clientId,
+    );
     const appId = this.configService.get<string>('instagram.appId');
     const appSecret = this.configService.get<string>('instagram.appSecret');
 
     const { data } = await axios.get<{
-      data: { app_id: string; type: string; scopes: string[]; is_valid: boolean };
+      data: {
+        app_id: string;
+        type: string;
+        scopes: string[];
+        is_valid: boolean;
+      };
     }>(`https://graph.facebook.com/debug_token`, {
       params: {
         input_token: token,
@@ -266,14 +273,24 @@ export class EngagementService {
 
         if (code === 4 || code === 32 || code === 613) {
           throw new HttpException(
-            { error: { code: 'RATE_LIMIT', message: 'Instagram rate limit reached' } },
+            {
+              error: {
+                code: 'RATE_LIMIT',
+                message: 'Instagram rate limit reached',
+              },
+            },
             HttpStatus.TOO_MANY_REQUESTS,
           );
         }
 
         if (code === 10 || code === 200) {
           throw new HttpException(
-            { error: { code: 'MISSING_PERMISSIONS', message: 'Missing required permissions' } },
+            {
+              error: {
+                code: 'MISSING_PERMISSIONS',
+                message: 'Missing required permissions',
+              },
+            },
             HttpStatus.FORBIDDEN,
           );
         }
@@ -284,9 +301,11 @@ export class EngagementService {
         );
       }
 
-      this.logger.error({ err: error, context }, `Unexpected error during ${context}`);
+      this.logger.error(
+        { err: error, context },
+        `Unexpected error during ${context}`,
+      );
       throw error;
     }
   }
-
 }

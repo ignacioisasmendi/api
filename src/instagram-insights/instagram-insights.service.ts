@@ -335,10 +335,14 @@ export class InstagramInsightsService {
     const cached = this.getCached<IgProfileResponse>(cacheKey);
     if (cached) return cached;
 
-    const { token, platformUserId } = await this.getValidToken(accountId, clientId);
+    const { token, platformUserId } = await this.getValidToken(
+      accountId,
+      clientId,
+    );
 
     const params = new URLSearchParams({
-      fields: 'id,username,followers_count,follows_count,media_count,profile_picture_url',
+      fields:
+        'id,username,followers_count,follows_count,media_count,profile_picture_url',
       access_token: token,
     });
 
@@ -375,7 +379,10 @@ export class InstagramInsightsService {
     const cached = this.getCached<MediaListResponse>(cacheKey);
     if (cached) return cached;
 
-    const { token, platformUserId } = await this.getValidToken(accountId, clientId);
+    const { token, platformUserId } = await this.getValidToken(
+      accountId,
+      clientId,
+    );
 
     const params = new URLSearchParams({
       fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp',
@@ -438,22 +445,24 @@ export class InstagramInsightsService {
 
     const tasks = mediaList.data.map(
       (item) => () =>
-        this.fetchMediaInsights(item.id, token, item.media_product_type).then((insights) => ({
-          id: item.id,
-          caption: item.caption ?? '',
-          mediaType: item.media_type,
-          mediaUrl: item.media_url ?? '',
-          timestamp: item.timestamp,
-          insights: {
-            impressions: insights.impressions,
-            reach: insights.reach,
-            likes: insights.likes,
-            comments: insights.comments,
-            saved: insights.saved,
-            shares: insights.shares,
-            videoViews: insights.videoViews,
-          },
-        })),
+        this.fetchMediaInsights(item.id, token, item.media_product_type).then(
+          (insights) => ({
+            id: item.id,
+            caption: item.caption ?? '',
+            mediaType: item.media_type,
+            mediaUrl: item.media_url ?? '',
+            timestamp: item.timestamp,
+            insights: {
+              impressions: insights.impressions,
+              reach: insights.reach,
+              likes: insights.likes,
+              comments: insights.comments,
+              saved: insights.saved,
+              shares: insights.shares,
+              videoViews: insights.videoViews,
+            },
+          }),
+        ),
     );
 
     const items = await this.withConcurrencyLimit(tasks, 5);
@@ -583,7 +592,14 @@ export class InstagramInsightsService {
         const fbtraceId: string | undefined = igError?.fbtrace_id;
 
         this.logger.error(
-          { status, igErrorCode: code, igErrorType: type, igMessage: message, fbtraceId, context },
+          {
+            status,
+            igErrorCode: code,
+            igErrorType: type,
+            igMessage: message,
+            fbtraceId,
+            context,
+          },
           `Instagram API error during ${context}: ${status} — ${message}`,
         );
 

@@ -72,8 +72,12 @@ export class TiktokController {
       clientId,
     );
 
-    const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
-    const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+    const decryptedAccess =
+      this.encryptionService.decrypt(socialAccount.accessToken) ??
+      socialAccount.accessToken!;
+    const decryptedRefresh =
+      this.encryptionService.decrypt(socialAccount.refreshToken) ??
+      socialAccount.refreshToken!;
 
     const creatorInfo = await this.tiktokPostService.executeWithTokenRefresh(
       socialAccount.id,
@@ -117,8 +121,12 @@ export class TiktokController {
       clientId,
     );
 
-    const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
-    const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+    const decryptedAccess =
+      this.encryptionService.decrypt(socialAccount.accessToken) ??
+      socialAccount.accessToken!;
+    const decryptedRefresh =
+      this.encryptionService.decrypt(socialAccount.refreshToken) ??
+      socialAccount.refreshToken!;
 
     const initData = await this.tiktokPostService.executeWithTokenRefresh(
       socialAccount.id,
@@ -206,8 +214,12 @@ export class TiktokController {
       dto.video_size = file.size;
 
       // Decrypt tokens before use
-      const decryptedAccess = this.encryptionService.decrypt(socialAccount.accessToken!) ?? socialAccount.accessToken!;
-      const decryptedRefresh = this.encryptionService.decrypt(socialAccount.refreshToken!) ?? socialAccount.refreshToken!;
+      const decryptedAccess =
+        this.encryptionService.decrypt(socialAccount.accessToken) ??
+        socialAccount.accessToken!;
+      const decryptedRefresh =
+        this.encryptionService.decrypt(socialAccount.refreshToken) ??
+        socialAccount.refreshToken!;
 
       // Execute with automatic token refresh
       const result = await this.tiktokPostService.executeWithTokenRefresh(

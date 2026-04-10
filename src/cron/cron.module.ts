@@ -11,6 +11,11 @@ import { PrismaService } from '../prisma/prisma.service';
 @Module({
   imports: [PublicationModule, PublishersModule, TkOauthModule],
   controllers: [CronController],
-  providers: [CronService, ShareLinkCronService, TkTokenRefreshCronService, PrismaService],
+  providers: [
+    CronService,
+    ShareLinkCronService,
+    TkTokenRefreshCronService,
+    PrismaService,
+  ],
 })
 export class CronModule {}

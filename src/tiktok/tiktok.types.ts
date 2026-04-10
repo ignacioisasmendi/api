@@ -96,7 +96,11 @@ export type TokenRefreshResponse = TokenRefreshData;
 // ── Publish Status ───────────────────────────────────────────────────
 
 export interface PublishStatusData {
-  status: 'PROCESSING_UPLOAD' | 'PUBLISH_COMPLETE' | 'FAILED' | 'PROCESSING_DOWNLOAD';
+  status:
+    | 'PROCESSING_UPLOAD'
+    | 'PUBLISH_COMPLETE'
+    | 'FAILED'
+    | 'PROCESSING_DOWNLOAD';
   /** Video IDs available once status is PUBLISH_COMPLETE. TikTok's own typo. */
   publicaly_available_post_id?: string[];
   fail_reason?: string;

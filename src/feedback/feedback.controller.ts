@@ -33,10 +33,7 @@ export class FeedbackController {
 
   @Post('upload-url')
   @HttpCode(HttpStatus.OK)
-  generateUploadUrl(
-    @GetUser() user: any,
-    @Body() dto: FeedbackUploadUrlDto,
-  ) {
+  generateUploadUrl(@GetUser() user: any, @Body() dto: FeedbackUploadUrlDto) {
     return this.feedbackService.generateUploadUrl(user.id, dto);
   }
 }

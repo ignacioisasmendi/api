@@ -18,8 +18,7 @@ export class AdminGuard implements CanActivate {
     const user = this.cls.get('user');
     if (!user?.email) throw new ForbiddenException('Admin access required');
 
-    const adminEmails =
-      this.configService.get<string[]>('admin.emails') ?? [];
+    const adminEmails = this.configService.get<string[]>('admin.emails') ?? [];
     if (!adminEmails.includes(user.email)) {
       throw new ForbiddenException('Admin access required');
     }

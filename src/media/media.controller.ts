@@ -45,9 +45,13 @@ export class MediaController {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    const parsedOrder =
-      order !== undefined ? parseInt(order, 10) : undefined;
-    return this.mediaService.uploadMedia(contentId, clientId, file, parsedOrder);
+    const parsedOrder = order !== undefined ? parseInt(order, 10) : undefined;
+    return this.mediaService.uploadMedia(
+      contentId,
+      clientId,
+      file,
+      parsedOrder,
+    );
   }
 
   /**

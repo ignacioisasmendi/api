@@ -36,10 +36,7 @@ export class IgRateLimitService {
    */
   updateFromHeader(platformUserId: string, headerValue: string): void {
     try {
-      const parsed = JSON.parse(headerValue) as Record<
-        string,
-        BucUsageEntry[]
-      >;
+      const parsed = JSON.parse(headerValue) as Record<string, BucUsageEntry[]>;
 
       // The key is typically 'instagram_graph_api' but we take the first entry found
       const entries = Object.values(parsed).flat();

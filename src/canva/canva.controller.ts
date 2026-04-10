@@ -1,9 +1,4 @@
-import {
-  Controller,
-  NotFoundException,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { Controller, NotFoundException, Param, Post } from '@nestjs/common';
 import { CanvaService, CanvaExportResult } from './canva.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EncryptionService } from 'src/shared/encryption/encryption.service';
@@ -38,7 +33,8 @@ export class CanvaController {
     }
 
     const accessToken = this.encryptionService.decrypt(account.accessToken)!;
-    const { editUrl, designId } = await this.canvaService.createDesign(accessToken);
+    const { editUrl, designId } =
+      await this.canvaService.createDesign(accessToken);
 
     return { editUrl, designId };
   }

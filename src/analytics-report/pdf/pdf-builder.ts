@@ -1,6 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
-import { ReportData, ReportCharts, TopPost } from '../interfaces/report.interfaces';
+import {
+  ReportData,
+  ReportCharts,
+  TopPost,
+} from '../interfaces/report.interfaces';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -156,7 +160,10 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(8)
       .fillColor(C.textMuted)
-      .text(label.toUpperCase(), x + 14, y + 14, { characterSpacing: 0.5, lineBreak: false });
+      .text(label.toUpperCase(), x + 14, y + 14, {
+        characterSpacing: 0.5,
+        lineBreak: false,
+      });
     d.font('Helvetica-Bold')
       .fontSize(26)
       .fillColor(C.text)
@@ -208,10 +215,16 @@ export class PdfBuilder {
     d.font('Helvetica-Bold')
       .fontSize(9)
       .fillColor(C.primary)
-      .text('ANALYTICS REPORT', M, 148, { characterSpacing: 2.5, lineBreak: false });
+      .text('ANALYTICS REPORT', M, 148, {
+        characterSpacing: 2.5,
+        lineBreak: false,
+      });
 
     // Title
-    d.font('Helvetica-Bold').fontSize(50).fillColor(C.white).text('Social Media', M, 172);
+    d.font('Helvetica-Bold')
+      .fontSize(50)
+      .fillColor(C.white)
+      .text('Social Media', M, 172);
     d.font('Helvetica-Bold')
       .fontSize(50)
       .fillColor(C.textSubtle)
@@ -229,7 +242,10 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(8)
       .fillColor(C.textMuted)
-      .text('ACCOUNT', M + 24, cardY + 22, { characterSpacing: 1.5, lineBreak: false });
+      .text('ACCOUNT', M + 24, cardY + 22, {
+        characterSpacing: 1.5,
+        lineBreak: false,
+      });
 
     d.font('Helvetica-Bold')
       .fontSize(26)
@@ -241,7 +257,11 @@ export class PdfBuilder {
     d.font('Helvetica-Bold')
       .fontSize(9)
       .fillColor(C.white)
-      .text(account.platform, M + 24, cardY + 86, { width: 110, align: 'center', lineBreak: false });
+      .text(account.platform, M + 24, cardY + 86, {
+        width: 110,
+        align: 'center',
+        lineBreak: false,
+      });
 
     // Divider inside card
     d.moveTo(M + 24, cardY + 120)
@@ -253,7 +273,10 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(8)
       .fillColor(C.textMuted)
-      .text('REPORT PERIOD', M + 24, cardY + 133, { characterSpacing: 1.5, lineBreak: false });
+      .text('REPORT PERIOD', M + 24, cardY + 133, {
+        characterSpacing: 1.5,
+        lineBreak: false,
+      });
 
     const fromStr = dateFrom.toLocaleDateString('en-US', {
       month: 'long',
@@ -268,7 +291,9 @@ export class PdfBuilder {
     d.font('Helvetica-Bold')
       .fontSize(13)
       .fillColor(C.white)
-      .text(`${fromStr}  —  ${toStr}`, M + 24, cardY + 151, { lineBreak: false });
+      .text(`${fromStr}  —  ${toStr}`, M + 24, cardY + 151, {
+        lineBreak: false,
+      });
 
     // Generated timestamp
     const genDate = new Date().toLocaleDateString('en-US', {
@@ -279,12 +304,10 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(9)
       .fillColor(C.bgMid)
-      .text(
-        `Generated on ${genDate}  ·  Powered by Planer`,
-        0,
-        H - 52,
-        { width: W, align: 'center' },
-      );
+      .text(`Generated on ${genDate}  ·  Powered by Planer`, 0, H - 52, {
+        width: W,
+        align: 'center',
+      });
 
     // Bottom accent bar
     d.rect(0, H - 6, W, 6).fill(C.primary);
@@ -308,7 +331,9 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(10)
       .fillColor(C.textMuted)
-      .text(`@${account.username}  ·  ${periodStr}`, M, CONTENT_Y + 46, { lineBreak: false });
+      .text(`@${account.username}  ·  ${periodStr}`, M, CONTENT_Y + 46, {
+        lineBreak: false,
+      });
 
     // Summary paragraph
     const growth = metrics.followerGrowthPct;
@@ -396,7 +421,11 @@ export class PdfBuilder {
       d.font('Helvetica-Bold')
         .fontSize(8)
         .fillColor(C.white)
-        .text(bestPost.mediaType, M + 14, bpY + 19, { width: 58, align: 'center', lineBreak: false });
+        .text(bestPost.mediaType, M + 14, bpY + 19, {
+          width: 58,
+          align: 'center',
+          lineBreak: false,
+        });
 
       // Caption
       const caption =
@@ -419,7 +448,12 @@ export class PdfBuilder {
         d.font('Helvetica-Bold')
           .fontSize(9)
           .fillColor(C.text)
-          .text(typeof s.v === 'number' ? this.fmt(s.v) : s.v, statsX + i * 90, statsY, { lineBreak: false });
+          .text(
+            typeof s.v === 'number' ? this.fmt(s.v) : s.v,
+            statsX + i * 90,
+            statsY,
+            { lineBreak: false },
+          );
         d.font('Helvetica')
           .fontSize(8)
           .fillColor(C.textSubtle)
@@ -438,7 +472,9 @@ export class PdfBuilder {
       d.font('Helvetica')
         .fontSize(10)
         .fillColor(C.textMuted)
-        .text('No post data available for this period.', M, bestY + 24, { lineBreak: false });
+        .text('No post data available for this period.', M, bestY + 24, {
+          lineBreak: false,
+        });
     }
   }
 
@@ -457,7 +493,12 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(9.5)
       .fillColor(C.textMuted)
-      .text('Daily impressions and reach over the selected period.', M, y + 46, { lineBreak: false });
+      .text(
+        'Daily impressions and reach over the selected period.',
+        M,
+        y + 46,
+        { lineBreak: false },
+      );
 
     y += 68;
     this.divider(y);
@@ -517,7 +558,12 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(9.5)
       .fillColor(C.textMuted)
-      .text('Aggregated engagement metrics across all posts in the selected period.', M, y + 46, { lineBreak: false });
+      .text(
+        'Aggregated engagement metrics across all posts in the selected period.',
+        M,
+        y + 46,
+        { lineBreak: false },
+      );
 
     y += 68;
     this.divider(y);
@@ -559,18 +605,27 @@ export class PdfBuilder {
     d.font('Helvetica-Bold')
       .fontSize(11)
       .fillColor(C.text)
-      .text('How is engagement rate calculated?', M + 20, y + 18, { lineBreak: false });
+      .text('How is engagement rate calculated?', M + 20, y + 18, {
+        lineBreak: false,
+      });
 
     d.font('Helvetica')
       .fontSize(10)
       .fillColor(C.textMuted)
-      .text('Engagement Rate  =  (Likes + Comments + Saves) / Total Reach  × 100', M + 20, y + 40, { lineBreak: false });
+      .text(
+        'Engagement Rate  =  (Likes + Comments + Saves) / Total Reach  × 100',
+        M + 20,
+        y + 40,
+        { lineBreak: false },
+      );
 
     d.roundedRect(M + 20, y + 62, 240, 30, 6).fill(C.primaryLight);
     d.font('Helvetica-Bold')
       .fontSize(22)
       .fillColor(C.primary)
-      .text(`${metrics.engagementRate.toFixed(2)}%`, M + 36, y + 68, { lineBreak: false });
+      .text(`${metrics.engagementRate.toFixed(2)}%`, M + 36, y + 68, {
+        lineBreak: false,
+      });
     d.font('Helvetica')
       .fontSize(9)
       .fillColor(C.textMuted)
@@ -594,8 +649,14 @@ export class PdfBuilder {
     totals.forEach((t, i) => {
       const cx = M + i * (cellW + 10);
       d.roundedRect(cx, y, cellW, 64, 6).fill(C.bgLight);
-      d.font('Helvetica').fontSize(8).fillColor(C.textMuted).text(t.label, cx + 12, y + 12, { lineBreak: false });
-      d.font('Helvetica-Bold').fontSize(22).fillColor(C.text).text(t.v, cx + 12, y + 28, { lineBreak: false });
+      d.font('Helvetica')
+        .fontSize(8)
+        .fillColor(C.textMuted)
+        .text(t.label, cx + 12, y + 12, { lineBreak: false });
+      d.font('Helvetica-Bold')
+        .fontSize(22)
+        .fillColor(C.text)
+        .text(t.v, cx + 12, y + 28, { lineBreak: false });
     });
   }
 
@@ -630,7 +691,9 @@ export class PdfBuilder {
     d.font('Helvetica-Bold')
       .fontSize(12)
       .fillColor(C.text)
-      .text(this.fmt(value), x + 90 + barAreaW + 12, y + 14, { lineBreak: false });
+      .text(this.fmt(value), x + 90 + barAreaW + 12, y + 14, {
+        lineBreak: false,
+      });
   }
 
   // ─── Page 5: Top Posts ───────────────────────────────────────────────────────
@@ -647,7 +710,9 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(9.5)
       .fillColor(C.textMuted)
-      .text('Ranked by engagement rate. Showing top 10 posts.', M, y + 46, { lineBreak: false });
+      .text('Ranked by engagement rate. Showing top 10 posts.', M, y + 46, {
+        lineBreak: false,
+      });
 
     y += 68;
     this.divider(y);
@@ -679,7 +744,8 @@ export class PdfBuilder {
         .fillColor(C.textSubtle)
         .text(col.label, cx + 8, y + 9, {
           width: col.w - 8,
-          align: col.label === 'CAPTION' || col.label === 'DATE' ? 'left' : 'right',
+          align:
+            col.label === 'CAPTION' || col.label === 'DATE' ? 'left' : 'right',
           lineBreak: false,
           characterSpacing: 0.5,
         });
@@ -723,10 +789,13 @@ export class PdfBuilder {
     // Caption
     const caption =
       post.caption.substring(0, 48) + (post.caption.length > 48 ? '…' : '');
-    d.font('Helvetica').fontSize(8).fillColor(C.text).text(caption, cx + 8, textY, {
-      width: cols[0].w - 16,
-      lineBreak: false,
-    });
+    d.font('Helvetica')
+      .fontSize(8)
+      .fillColor(C.text)
+      .text(caption, cx + 8, textY, {
+        width: cols[0].w - 16,
+        lineBreak: false,
+      });
     cx += cols[0].w;
 
     // Date
@@ -734,10 +803,13 @@ export class PdfBuilder {
       month: 'short',
       day: 'numeric',
     });
-    d.font('Helvetica').fontSize(8).fillColor(C.textMuted).text(dt, cx + 8, textY, {
-      width: cols[1].w - 10,
-      lineBreak: false,
-    });
+    d.font('Helvetica')
+      .fontSize(8)
+      .fillColor(C.textMuted)
+      .text(dt, cx + 8, textY, {
+        width: cols[1].w - 10,
+        lineBreak: false,
+      });
     cx += cols[1].w;
 
     // Numeric columns
@@ -752,7 +824,11 @@ export class PdfBuilder {
       d.font('Helvetica-Bold')
         .fontSize(8)
         .fillColor(C.text)
-        .text(v, cx, textY, { width: colW - 10, align: 'right', lineBreak: false });
+        .text(v, cx, textY, {
+          width: colW - 10,
+          align: 'right',
+          lineBreak: false,
+        });
       cx += colW;
     });
   }
@@ -771,7 +847,12 @@ export class PdfBuilder {
     d.font('Helvetica')
       .fontSize(9.5)
       .fillColor(C.textMuted)
-      .text('AI-assisted insights based on your account metrics and content performance.', M, y + 46, { lineBreak: false });
+      .text(
+        'AI-assisted insights based on your account metrics and content performance.',
+        M,
+        y + 46,
+        { lineBreak: false },
+      );
 
     y += 68;
     this.divider(y);
@@ -793,16 +874,23 @@ export class PdfBuilder {
       d.font('Helvetica-Bold')
         .fontSize(12)
         .fillColor(C.white)
-        .text(String(i + 1), M + 16, boxY + 16, { width: 0, align: 'center', lineBreak: false });
+        .text(String(i + 1), M + 16, boxY + 16, {
+          width: 0,
+          align: 'center',
+          lineBreak: false,
+        });
 
       // Text area
       const textX = M + 42;
       const textW = CW - 46;
 
-      d.font('Helvetica').fontSize(10).fillColor(C.text).text(rec, textX, boxY + 12, {
-        width: textW,
-        align: 'left',
-      });
+      d.font('Helvetica')
+        .fontSize(10)
+        .fillColor(C.text)
+        .text(rec, textX, boxY + 12, {
+          width: textW,
+          align: 'left',
+        });
 
       // Use doc.y after text to determine next position
       y = this.d.y + 16;

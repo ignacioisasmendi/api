@@ -59,9 +59,7 @@ export class InstagramPublisher implements IPlatformPublisher {
    * Phase 1: Creates the media container and waits for processing.
    * Called ~5 minutes before publishAt so the container is ready in time.
    */
-  async prepare(
-    publication: PublicationWithRelations,
-  ): Promise<PrepareResult> {
+  async prepare(publication: PublicationWithRelations): Promise<PrepareResult> {
     try {
       this.logger.log(`Preparing Instagram container for: ${publication.id}`);
 
@@ -230,7 +228,10 @@ export class InstagramPublisher implements IPlatformPublisher {
       publication.customCaption || publication.content.caption || '';
 
     const isVideo = media.type === 'VIDEO';
-    const params = new URLSearchParams({ caption, access_token: this.plainToken(publication) });
+    const params = new URLSearchParams({
+      caption,
+      access_token: this.plainToken(publication),
+    });
     if (isVideo) {
       // Instagram deprecated standalone video feed posts — videos must use the Reels
       // container with share_to_feed: true to appear in the feed.
@@ -251,7 +252,9 @@ export class InstagramPublisher implements IPlatformPublisher {
 
     this.logger.log(`Feed container created with ID: ${data.id}`);
 
-    const processingWait = isVideo ? this.videoProcessingWaitTime : this.mediaProcessingWaitTime;
+    const processingWait = isVideo
+      ? this.videoProcessingWaitTime
+      : this.mediaProcessingWaitTime;
     await this.waitForMediaProcessing(
       data.id,
       this.plainToken(publication),
@@ -408,7 +411,8 @@ export class InstagramPublisher implements IPlatformPublisher {
       if (Date.now() - start > timeoutMs) {
         this.logger.error({
           context: 'InstagramPublisher',
-          message: '[waitForMediaProcessing] Timeout waiting for media processing',
+          message:
+            '[waitForMediaProcessing] Timeout waiting for media processing',
           creationId,
           attempts,
           totalSeconds: elapsed,
@@ -420,7 +424,6 @@ export class InstagramPublisher implements IPlatformPublisher {
       await this.delay(InstagramPublisher.POLLING_INTERVAL_MS);
     }
   }
-
 
   private async createCarouselContainer(
     publication: PublicationWithRelations,
@@ -499,7 +502,7 @@ export class InstagramPublisher implements IPlatformPublisher {
 
   // ─── Helpers ──────────────────────────────────────────────────────────
 
-/**
+  /**
    * Publish a previously created media container.
    * Returns { id, permalink } fetched right after publishing.
    */
@@ -583,8 +586,7 @@ export class InstagramPublisher implements IPlatformPublisher {
 
         // Track usage from response header
         if (platformUserId) {
-          const usageHeader =
-            response.headers['x-business-use-case-usage'];
+          const usageHeader = response.headers['x-business-use-case-usage'];
           if (usageHeader) {
             this.igRateLimitService.updateFromHeader(
               platformUserId,

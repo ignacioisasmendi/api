@@ -154,8 +154,7 @@ export class TikTokPublisher implements IPlatformPublisher {
       dto.disable_comment =
         (platformConfig?.disable_comment as boolean) ?? false;
       dto.disable_duet = (platformConfig?.disable_duet as boolean) ?? false;
-      dto.disable_stitch =
-        (platformConfig?.disable_stitch as boolean) ?? false;
+      dto.disable_stitch = (platformConfig?.disable_stitch as boolean) ?? false;
       dto.source_type = TikTokSourceType.FILE_UPLOAD;
       dto.video_size = fileSize;
 

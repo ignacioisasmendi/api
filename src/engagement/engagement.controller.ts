@@ -40,7 +40,10 @@ export class EngagementController {
     @GetClientId() clientId: string,
     @Query('accountId') accountId: string,
   ) {
-    return this.engagementService.debugToken(accountId, 'cmljwyf560001fdcoco2mnle3');
+    return this.engagementService.debugToken(
+      accountId,
+      'cmljwyf560001fdcoco2mnle3',
+    );
   }
 
   /**

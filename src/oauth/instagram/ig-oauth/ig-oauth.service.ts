@@ -14,7 +14,9 @@ export class IgOauthService {
     this.instagramAppSecret = configService.get('instagram.appSecret')!;
     this.instagramCallbackUrl = configService.get('instagram.callbackUrl')!;
 
-    this.logger.log(`Instagram OAuth service initialized — callbackUrl: ${this.instagramCallbackUrl}`);
+    this.logger.log(
+      `Instagram OAuth service initialized — callbackUrl: ${this.instagramCallbackUrl}`,
+    );
   }
 
   async exchangeCodeForToken(code: string) {
@@ -85,9 +87,12 @@ export class IgOauthService {
           `Long-lived token exchange failed: ${error.response?.data?.error?.message || error.message}`,
         );
       }
-      this.logger.error('Instagram long-lived token exchange failed (non-HTTP)', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.error(
+        'Instagram long-lived token exchange failed (non-HTTP)',
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
       throw error;
     }
   }

@@ -5,10 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateTaskListDto,
-  UpdateTaskListDto,
-} from './dto/task-list.dto';
+import { CreateTaskListDto, UpdateTaskListDto } from './dto/task-list.dto';
 
 @Injectable()
 export class TaskListService {
@@ -26,11 +23,7 @@ export class TaskListService {
     });
   }
 
-  async createList(
-    boardId: string,
-    clientId: string,
-    dto: CreateTaskListDto,
-  ) {
+  async createList(boardId: string, clientId: string, dto: CreateTaskListDto) {
     await this.verifyBoardOwnership(boardId, clientId);
 
     const maxOrder = await this.prisma.taskList.aggregate({
@@ -90,11 +83,7 @@ export class TaskListService {
     this.logger.log(`List deleted: ${listId} from board ${boardId}`);
   }
 
-  async reorderLists(
-    boardId: string,
-    clientId: string,
-    listIds: string[],
-  ) {
+  async reorderLists(boardId: string, clientId: string, listIds: string[]) {
     await this.verifyBoardOwnership(boardId, clientId);
 
     const existingLists = await this.prisma.taskList.findMany({

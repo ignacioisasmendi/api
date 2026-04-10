@@ -73,7 +73,11 @@ export class CanvaOauthController {
     }
 
     // 2. Fetch Canva user profile
-    let canvaUser: { user_id: string; display_name: string; profile_url: string };
+    let canvaUser: {
+      user_id: string;
+      display_name: string;
+      profile_url: string;
+    };
     try {
       const profile = await this.canvaOauthService.getUserProfile(
         tokenData.access_token,

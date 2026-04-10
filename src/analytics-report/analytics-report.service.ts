@@ -95,7 +95,11 @@ export class AnalyticsReportService {
 
     // Parallel data fetching
     const [insights, mediaData, timeSeries] = await Promise.all([
-      this.insightsService.getAccountInsights(dto.socialAccountId, clientId, period),
+      this.insightsService.getAccountInsights(
+        dto.socialAccountId,
+        clientId,
+        period,
+      ),
       this.insightsService.getMediaWithInsights(dto.socialAccountId, clientId),
       this.fetchDailyTimeSeries(platformUserId, token, dateFrom, dateTo),
     ]);
@@ -204,7 +208,12 @@ export class AnalyticsReportService {
 
   private buildReportData(
     account: { username: string; platform: string },
-    insights: { impressions: number; reach: number; profileViews: number; followerCount: number },
+    insights: {
+      impressions: number;
+      reach: number;
+      profileViews: number;
+      followerCount: number;
+    },
     posts: MediaItem[],
     timeSeries: DailyTimeSeries,
     dateFrom: Date,
@@ -265,7 +274,10 @@ export class AnalyticsReportService {
     };
 
     const reportData: ReportData = {
-      account: { username: account.username, platform: String(account.platform) },
+      account: {
+        username: account.username,
+        platform: String(account.platform),
+      },
       dateFrom,
       dateTo,
       metrics,
@@ -286,9 +298,7 @@ export class AnalyticsReportService {
     const { metrics, topPosts } = data;
     const daysDiff = Math.max(
       1,
-      Math.ceil(
-        (data.dateTo.getTime() - data.dateFrom.getTime()) / 86_400_000,
-      ),
+      Math.ceil((data.dateTo.getTime() - data.dateFrom.getTime()) / 86_400_000),
     );
 
     // Engagement rate

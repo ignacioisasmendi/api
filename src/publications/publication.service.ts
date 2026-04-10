@@ -53,6 +53,7 @@ const PUBLICATION_SELECT = {
   content: {
     select: {
       id: true,
+      calendarId: true,
       caption: true,
       clientId: true,
       media: { orderBy: { order: 'asc' as const } },

@@ -35,9 +35,7 @@ export class CronService {
 
       if (publications.length === 0) return;
 
-      this.logger.log(
-        `Found ${publications.length} publication(s) to prepare`,
-      );
+      this.logger.log(`Found ${publications.length} publication(s) to prepare`);
 
       for (const publication of publications) {
         try {
@@ -94,7 +92,10 @@ export class CronService {
 
           if (error instanceof IgRateLimitError) {
             this.logger.warn(
-              { publicationId: publication.id, platformUserId: error.platformUserId },
+              {
+                publicationId: publication.id,
+                platformUserId: error.platformUserId,
+              },
               `Instagram rate limited during prepare — reverting to SCHEDULED`,
             );
             try {
@@ -150,9 +151,7 @@ export class CronService {
 
       if (publications.length === 0) return;
 
-      this.logger.log(
-        `Found ${publications.length} publication(s) to publish`,
-      );
+      this.logger.log(`Found ${publications.length} publication(s) to publish`);
 
       for (const publication of publications) {
         try {
@@ -201,7 +200,10 @@ export class CronService {
 
           if (error instanceof IgRateLimitError) {
             this.logger.warn(
-              { publicationId: publication.id, platformUserId: error.platformUserId },
+              {
+                publicationId: publication.id,
+                platformUserId: error.platformUserId,
+              },
               `Instagram rate limited during publish — reverting to SCHEDULED`,
             );
             try {

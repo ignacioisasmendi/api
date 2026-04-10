@@ -11,7 +11,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DraftsService } from './drafts.service';
-import { CreateDraftDto, UpdateDraftDto, ListDraftsQueryDto } from './dto/draft.dto';
+import {
+  CreateDraftDto,
+  UpdateDraftDto,
+  ListDraftsQueryDto,
+} from './dto/draft.dto';
 import { GetClientId, GetUser } from '../decorators';
 
 @Controller('drafts')
@@ -29,10 +33,7 @@ export class DraftsController {
   }
 
   @Get()
-  findAll(
-    @GetClientId() clientId: string,
-    @Query() query: ListDraftsQueryDto,
-  ) {
+  findAll(@GetClientId() clientId: string, @Query() query: ListDraftsQueryDto) {
     return this.draftsService.findAll(clientId, query);
   }
 

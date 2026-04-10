@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Mixpanel from 'mixpanel';
-import type { AnalyticsPort, AnalyticsEvent, AnalyticsIdentity } from './analytics.port';
+import type {
+  AnalyticsPort,
+  AnalyticsEvent,
+  AnalyticsIdentity,
+} from './analytics.port';
 
 @Injectable()
 export class MixpanelAdapter implements AnalyticsPort, OnModuleInit {

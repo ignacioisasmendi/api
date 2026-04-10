@@ -62,7 +62,9 @@ export class EncryptionService {
     });
     decipher.setAuthTag(authTag);
 
-    return decipher.update(ciphertext).toString('utf8') + decipher.final('utf8');
+    return (
+      decipher.update(ciphertext).toString('utf8') + decipher.final('utf8')
+    );
   }
 }
 

@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../shared/storage/storage.service';
 import { PlanService } from '../plans/plan.service';
@@ -95,13 +91,20 @@ export class ClientService {
     this.logger.log(`Client deleted: ${id} by user ${userId}`);
   }
 
-  async saveLogo(id: string, userId: string, dto: SaveLogoDto): Promise<Client> {
+  async saveLogo(
+    id: string,
+    userId: string,
+    dto: SaveLogoDto,
+  ): Promise<Client> {
     const client = await this.getClient(id, userId);
 
     // Delete old logo from R2 if it exists
     if (client.logoKey) {
       await this.storage.deleteFile(client.logoKey).catch((err) => {
-        this.logger.warn({ err, key: client.logoKey }, 'Failed to delete old logo');
+        this.logger.warn(
+          { err, key: client.logoKey },
+          'Failed to delete old logo',
+        );
       });
     }
 
@@ -115,7 +118,9 @@ export class ClientService {
   }
 
   async deleteLogo(id: string, userId: string): Promise<Client> {
-    const client = await this.prisma.client.findFirst({ where: { id, userId } });
+    const client = await this.prisma.client.findFirst({
+      where: { id, userId },
+    });
 
     if (!client) {
       throw new NotFoundException(`Client ${id} not found`);

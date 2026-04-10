@@ -24,7 +24,7 @@ export class ConfigValidationService implements OnModuleInit {
     const tokenKey = this.configService.get<string>('encryption.tokenKey');
     if (!tokenKey || !/^[0-9a-fA-F]{64}$/.test(tokenKey)) {
       errors.push(
-        'TOKEN_ENCRYPTION_KEY must be set to exactly 64 hex characters (32 bytes). Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"',
+        "TOKEN_ENCRYPTION_KEY must be set to exactly 64 hex characters (32 bytes). Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
       );
     }
 

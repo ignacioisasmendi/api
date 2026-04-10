@@ -1,11 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { UserPlan } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  PLAN_LIMITS,
-  PlanLimits,
-  PlanFeatureKey,
-} from './plan-limits.config';
+import { PLAN_LIMITS, PlanLimits, PlanFeatureKey } from './plan-limits.config';
 
 export interface UsageSummary {
   plan: UserPlan;
@@ -35,10 +31,7 @@ export class PlanService {
 
   // ── Resource limit assertions ─────────────────────────────────────
 
-  async assertCanCreateClient(
-    userId: string,
-    plan: UserPlan,
-  ): Promise<void> {
+  async assertCanCreateClient(userId: string, plan: UserPlan): Promise<void> {
     const count = await this.prisma.client.count({ where: { userId } });
     const limit = PLAN_LIMITS[plan].maxClients;
     if (count >= limit) {

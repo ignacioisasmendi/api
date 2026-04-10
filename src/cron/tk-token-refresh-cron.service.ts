@@ -43,10 +43,7 @@ export class TkTokenRefreshCronService {
             lte: twoHoursFromNow,
             gte: now,
           },
-          OR: [
-            { refreshExpiresAt: null },
-            { refreshExpiresAt: { gt: now } },
-          ],
+          OR: [{ refreshExpiresAt: null }, { refreshExpiresAt: { gt: now } }],
         },
         select: { id: true, refreshToken: true },
       });

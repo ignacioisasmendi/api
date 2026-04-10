@@ -57,7 +57,9 @@ export class TkOauthService {
     }
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<TikTokRefreshTokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<TikTokRefreshTokenResponse> {
     const form = new URLSearchParams({
       client_key: this.clientKey,
       client_secret: this.clientSecret,

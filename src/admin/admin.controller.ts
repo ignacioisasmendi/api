@@ -15,11 +15,11 @@ import { AdminGuard } from './admin.guard';
 import { SkipClientValidation } from '../decorators';
 import {
   AdminUsersQueryDto,
+  AdminWaitlistQueryDto,
   UpdateUserPlanDto,
   UpdateUserStatusDto,
   InviteBulkDto,
 } from './dto/admin.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
 import { FeedbackService } from '../feedback/feedback.service';
 import {
   AdminFeedbackQueryDto,
@@ -52,18 +52,12 @@ export class AdminController {
   }
 
   @Patch('users/:id/plan')
-  updateUserPlan(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserPlanDto,
-  ) {
+  updateUserPlan(@Param('id') id: string, @Body() dto: UpdateUserPlanDto) {
     return this.adminService.updateUserPlan(id, dto.plan);
   }
 
   @Patch('users/:id/status')
-  updateUserStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserStatusDto,
-  ) {
+  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
     return this.adminService.updateUserStatus(id, dto.status);
   }
 
@@ -78,7 +72,7 @@ export class AdminController {
   }
 
   @Get('waitlist')
-  getWaitlist(@Query() query: PaginationDto) {
+  getWaitlist(@Query() query: AdminWaitlistQueryDto) {
     return this.adminService.getWaitlist(query);
   }
 
@@ -114,10 +108,7 @@ export class AdminController {
 
   @Post('feedback/:id/respond')
   @HttpCode(HttpStatus.OK)
-  respondToFeedback(
-    @Param('id') id: string,
-    @Body() dto: RespondFeedbackDto,
-  ) {
+  respondToFeedback(@Param('id') id: string, @Body() dto: RespondFeedbackDto) {
     return this.feedbackService.respond(id, dto.adminResponse);
   }
 }

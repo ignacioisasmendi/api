@@ -26,10 +26,7 @@ export class CampaignsController {
   }
 
   @Get()
-  findAll(
-    @GetClientId() clientId: string,
-    @Query() pagination: PaginationDto,
-  ) {
+  findAll(@GetClientId() clientId: string, @Query() pagination: PaginationDto) {
     return this.campaignsService.findAll(clientId, pagination);
   }
 

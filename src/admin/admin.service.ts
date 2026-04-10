@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  PaginatedResponse,
-  PaginationDto,
-} from '../common/dto/pagination.dto';
+import { PaginatedResponse } from '../common/dto/pagination.dto';
 import {
   AdminGrowthPoint,
   AdminOverviewResponse,
@@ -12,6 +9,7 @@ import {
   AdminWaitlistEntry,
   AdminWaitlistGrowthPoint,
   AdminUsersQueryDto,
+  AdminWaitlistQueryDto,
 } from './dto/admin.dto';
 import { UserPlan, UserStatus } from '@prisma/client';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
@@ -43,8 +41,8 @@ export class AdminService {
       }),
     ]);
 
-    const userGrowth: { date: string; count: number }[] =
-      await this.prisma.$queryRaw`
+    const userGrowth: { date: string; count: number }[] = await this.prisma
+      .$queryRaw`
         SELECT DATE_TRUNC('day', "createdAt" AT TIME ZONE 'UTC')::date::text AS date,
                COUNT(*)::int AS count
         FROM "User"
@@ -53,8 +51,8 @@ export class AdminService {
         ORDER BY 1
       `;
 
-    const pubGrowth: { date: string; count: number }[] =
-      await this.prisma.$queryRaw`
+    const pubGrowth: { date: string; count: number }[] = await this.prisma
+      .$queryRaw`
         SELECT DATE_TRUNC('day', "createdAt" AT TIME ZONE 'UTC')::date::text AS date,
                COUNT(*)::int AS count
         FROM "Publication"
@@ -166,16 +164,23 @@ export class AdminService {
   }
 
   async getWaitlist(
-    query: PaginationDto,
+    query: AdminWaitlistQueryDto,
   ): Promise<PaginatedResponse<AdminWaitlistEntry>> {
+    const term = query.search?.trim();
+    const where =
+      term && term.length > 0
+        ? { email: { contains: term, mode: 'insensitive' as const } }
+        : {};
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.waitlistEntry.findMany({
+        where,
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
         select: { id: true, email: true, invitedAt: true, createdAt: true },
       }),
-      this.prisma.waitlistEntry.count(),
+      this.prisma.waitlistEntry.count({ where }),
     ]);
 
     return {
@@ -197,8 +202,7 @@ export class AdminService {
   }
 
   async getWaitlistGrowth(): Promise<AdminWaitlistGrowthPoint[]> {
-    const rows: { date: string; count: number }[] =
-      await this.prisma.$queryRaw`
+    const rows: { date: string; count: number }[] = await this.prisma.$queryRaw`
         SELECT DATE_TRUNC('day', "createdAt" AT TIME ZONE 'UTC')::date::text AS date,
                COUNT(*)::int AS count
         FROM "waitlist_entries"

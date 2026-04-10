@@ -28,10 +28,9 @@ export class PlanFeatureGuard implements CanActivate {
     }
 
     // Check if a feature requirement is set on handler or class
-    const feature = this.reflector.getAllAndOverride<PlanFeatureKey | undefined>(
-      REQUIRED_FEATURE_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const feature = this.reflector.getAllAndOverride<
+      PlanFeatureKey | undefined
+    >(REQUIRED_FEATURE_KEY, [context.getHandler(), context.getClass()]);
 
     // No feature requirement — allow
     if (!feature) {

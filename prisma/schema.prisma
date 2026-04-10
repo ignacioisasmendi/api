@@ -234,6 +234,7 @@ model CalendarShareLink {
   calendarId     String
   tokenHash      String          @unique
   label          String?
+  filterScope    Json?
   permission     SharePermission @default(VIEW_AND_COMMENT)
   isActive       Boolean         @default(true)
   expiresAt      DateTime?       @db.Timestamptz(3)
