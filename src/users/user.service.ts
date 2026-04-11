@@ -50,24 +50,11 @@ export class UserService {
             where: { email: emailForWaitlist },
           });
           if (waitlistEntry?.invitedAt) {
-            const clientCount = await this.prisma.client.count({
-              where: { userId: user.id },
-            });
             user = await this.prisma.user.update({
               where: { id: user.id },
               data: {
                 status: UserStatus.ACTIVE,
                 plan: UserPlan.BETA,
-                ...(clientCount === 0 && {
-                  clients: {
-                    create: {
-                      name:
-                        user.name ||
-                        userData.name ||
-                        emailForWaitlist.split('@')[0],
-                    },
-                  },
-                }),
               },
             });
             this.logger.log(
@@ -115,20 +102,10 @@ export class UserService {
           avatar: userData.avatar,
           plan,
           status,
-          // Only create a default client for active users
-          ...(status === UserStatus.ACTIVE && {
-            clients: {
-              create: {
-                name: userData.name || userData.email.split('@')[0],
-              },
-            },
-          }),
         },
       });
 
-      this.logger.log(
-        `New user created with ID: ${user.id} (with default client)`,
-      );
+      this.logger.log(`New user created with ID: ${user.id}`);
 
       this.analytics
         .identify({
