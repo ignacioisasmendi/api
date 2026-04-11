@@ -16,9 +16,11 @@ import { SkipClientValidation } from '../decorators';
 import {
   AdminUsersQueryDto,
   AdminWaitlistQueryDto,
+  AdminWaitlistInviteSendsQueryDto,
   UpdateUserPlanDto,
   UpdateUserStatusDto,
   InviteBulkDto,
+  WaitlistInviteSendLogBatchDto,
 } from './dto/admin.dto';
 import { FeedbackService } from '../feedback/feedback.service';
 import {
@@ -74,6 +76,17 @@ export class AdminController {
   @Get('waitlist')
   getWaitlist(@Query() query: AdminWaitlistQueryDto) {
     return this.adminService.getWaitlist(query);
+  }
+
+  @Get('waitlist/invite-sends')
+  listWaitlistInviteSends(@Query() query: AdminWaitlistInviteSendsQueryDto) {
+    return this.adminService.listWaitlistInviteSends(query);
+  }
+
+  @Post('waitlist/invite-sends')
+  @HttpCode(HttpStatus.OK)
+  recordWaitlistInviteSends(@Body() dto: WaitlistInviteSendLogBatchDto) {
+    return this.adminService.recordWaitlistInviteSendsBatch(dto.sends);
   }
 
   @Post('waitlist/:id/invite')

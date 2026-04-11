@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsEnum, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsArray,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UserPlan, UserStatus } from '@prisma/client';
 
@@ -28,6 +36,34 @@ export class InviteBulkDto {
   @IsArray()
   @IsString({ each: true })
   ids: string[];
+}
+
+export class AdminWaitlistInviteSendsQueryDto extends PaginationDto {
+  @IsOptional()
+  @IsString()
+  waitlistEntryId?: string;
+}
+
+export class WaitlistInviteSendLogItemDto {
+  @IsString()
+  waitlistEntryId: string;
+
+  @IsString()
+  templateKey: string;
+
+  @IsBoolean()
+  success: boolean;
+
+  @IsOptional()
+  @IsString()
+  errorMessage?: string;
+}
+
+export class WaitlistInviteSendLogBatchDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WaitlistInviteSendLogItemDto)
+  sends: WaitlistInviteSendLogItemDto[];
 }
 
 export interface AdminTotals {
@@ -97,6 +133,17 @@ export interface AdminWaitlistEntry {
   email: string;
   invitedAt: Date | null;
   createdAt: Date;
+  emailSendCount: number;
+}
+
+export interface AdminWaitlistInviteSend {
+  id: string;
+  waitlistEntryId: string;
+  recipientEmail: string;
+  templateKey: string;
+  success: boolean;
+  errorMessage: string | null;
+  sentAt: Date;
 }
 
 export interface AdminWaitlistGrowthPoint {

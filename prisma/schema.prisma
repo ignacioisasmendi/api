@@ -274,13 +274,29 @@ model Comment {
 }
 
 model WaitlistEntry {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  invitedAt DateTime? @db.Timestamptz(3)
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  id          String               @id @default(cuid())
+  email       String               @unique
+  invitedAt   DateTime?            @db.Timestamptz(3)
+  createdAt   DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime             @updatedAt @db.Timestamptz(3)
+  inviteSends WaitlistInviteSend[]
 
   @@map("waitlist_entries")
+}
+
+model WaitlistInviteSend {
+  id               String        @id @default(cuid())
+  waitlistEntryId  String
+  recipientEmail   String
+  templateKey      String
+  success          Boolean
+  errorMessage     String?
+  sentAt           DateTime      @default(now()) @db.Timestamptz(3)
+  waitlistEntry    WaitlistEntry @relation(fields: [waitlistEntryId], references: [id], onDelete: Cascade)
+
+  @@index([waitlistEntryId])
+  @@index([sentAt(sort: Desc)])
+  @@map("waitlist_invite_sends")
 }
 
 enum UserPlan {

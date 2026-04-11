@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/pagination.dto';
 import {
@@ -8,8 +8,11 @@ import {
   AdminUserListItem,
   AdminWaitlistEntry,
   AdminWaitlistGrowthPoint,
+  AdminWaitlistInviteSend,
+  AdminWaitlistInviteSendsQueryDto,
   AdminUsersQueryDto,
   AdminWaitlistQueryDto,
+  WaitlistInviteSendLogItemDto,
 } from './dto/admin.dto';
 import { UserPlan, UserStatus } from '@prisma/client';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
@@ -172,16 +175,30 @@ export class AdminService {
         ? { email: { contains: term, mode: 'insensitive' as const } }
         : {};
 
-    const [data, total] = await this.prisma.$transaction([
+    const [rows, total] = await this.prisma.$transaction([
       this.prisma.waitlistEntry.findMany({
         where,
         skip: query.skip,
         take: query.limit,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, invitedAt: true, createdAt: true },
+        select: {
+          id: true,
+          email: true,
+          invitedAt: true,
+          createdAt: true,
+          _count: { select: { inviteSends: true } },
+        },
       }),
       this.prisma.waitlistEntry.count({ where }),
     ]);
+
+    const data: AdminWaitlistEntry[] = rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      invitedAt: row.invitedAt,
+      createdAt: row.createdAt,
+      emailSendCount: row._count.inviteSends,
+    }));
 
     return {
       data,
@@ -195,10 +212,23 @@ export class AdminService {
   }
 
   async getWaitlistExport(): Promise<AdminWaitlistEntry[]> {
-    return this.prisma.waitlistEntry.findMany({
+    const rows = await this.prisma.waitlistEntry.findMany({
       orderBy: { createdAt: 'desc' },
-      select: { id: true, email: true, invitedAt: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        invitedAt: true,
+        createdAt: true,
+        _count: { select: { inviteSends: true } },
+      },
     });
+    return rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      invitedAt: row.invitedAt,
+      createdAt: row.createdAt,
+      emailSendCount: row._count.inviteSends,
+    }));
   }
 
   async getWaitlistGrowth(): Promise<AdminWaitlistGrowthPoint[]> {
@@ -227,13 +257,13 @@ export class AdminService {
       where: { id },
     });
 
-    // Set invitedAt on the waitlist entry
-    await this.prisma.waitlistEntry.update({
-      where: { id },
-      data: { invitedAt: new Date() },
-    });
+    if (!entry.invitedAt) {
+      await this.prisma.waitlistEntry.update({
+        where: { id },
+        data: { invitedAt: new Date() },
+      });
+    }
 
-    // If a User with that email already exists, activate them with BETA plan
     const existingUser = await this.prisma.user.findUnique({
       where: { email: entry.email },
     });
@@ -254,23 +284,99 @@ export class AdminService {
         where: { id: { in: ids } },
       });
 
-      // Mark all as invited
-      await tx.waitlistEntry.updateMany({
-        where: { id: { in: ids } },
-        data: { invitedAt: new Date() },
-      });
+      const now = new Date();
+      for (const e of entries) {
+        if (!e.invitedAt) {
+          await tx.waitlistEntry.update({
+            where: { id: e.id },
+            data: { invitedAt: now },
+          });
+        }
+      }
 
-      // Activate any existing users with those emails
       const emails = entries.map((e) => e.email);
       await tx.user.updateMany({
         where: { email: { in: emails } },
         data: { status: UserStatus.ACTIVE, plan: UserPlan.BETA },
       });
 
-      return { invited: entries.length };
+      return {
+        invited: entries.length,
+        entries: entries.map((e) => ({ id: e.id, email: e.email })),
+      };
     });
 
-    return results;
+    return { success: true, ...results };
+  }
+
+  async recordWaitlistInviteSendsBatch(
+    sends: WaitlistInviteSendLogItemDto[],
+  ): Promise<{ recorded: number }> {
+    if (sends.length === 0) {
+      return { recorded: 0 };
+    }
+
+    const ids = [...new Set(sends.map((s) => s.waitlistEntryId))];
+    const found = await this.prisma.waitlistEntry.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, email: true },
+    });
+    const emailById = new Map(found.map((e) => [e.id, e.email]));
+
+    for (const id of ids) {
+      if (!emailById.has(id)) {
+        throw new BadRequestException(`Unknown waitlist entry: ${id}`);
+      }
+    }
+
+    await this.prisma.waitlistInviteSend.createMany({
+      data: sends.map((s) => ({
+        waitlistEntryId: s.waitlistEntryId,
+        recipientEmail: emailById.get(s.waitlistEntryId)!,
+        templateKey: s.templateKey,
+        success: s.success,
+        errorMessage: s.errorMessage ?? null,
+      })),
+    });
+
+    return { recorded: sends.length };
+  }
+
+  async listWaitlistInviteSends(
+    query: AdminWaitlistInviteSendsQueryDto,
+  ): Promise<PaginatedResponse<AdminWaitlistInviteSend>> {
+    const where = query.waitlistEntryId
+      ? { waitlistEntryId: query.waitlistEntryId }
+      : {};
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.waitlistInviteSend.findMany({
+        where,
+        skip: query.skip,
+        take: query.limit,
+        orderBy: { sentAt: 'desc' },
+        select: {
+          id: true,
+          waitlistEntryId: true,
+          recipientEmail: true,
+          templateKey: true,
+          success: true,
+          errorMessage: true,
+          sentAt: true,
+        },
+      }),
+      this.prisma.waitlistInviteSend.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
   }
 
   async updateUserPlan(userId: string, plan: UserPlan) {

@@ -42,24 +42,39 @@ export class UserService {
       });
 
       if (user) {
-        // Usuario existe - opcionalmente actualizar información
-        // Solo actualizamos si hay cambios (para no hacer writes innecesarios)
-        /* const needsUpdate =
-          user.email !== userData.email ||
-          user.name !== userData.name ||
-          user.avatar !== userData.avatar;
-
-        if (needsUpdate) {
-          this.logger.log(`Updating user ${user.id} with latest info from Auth0`);
-          user = await this.prisma.user.update({
-            where: { id: user.id },
-            data: {
-              email: userData.email,
-              name: userData.name,
-              avatar: userData.avatar,
-            },
+        // If they were waitlisted but admin already invited (invitedAt set), activate now.
+        // Matches invite email timing so the next login works even if the admin upsert missed.
+        const emailForWaitlist = (userData.email || user.email || '').trim();
+        if (user.status === UserStatus.WAITLISTED && emailForWaitlist) {
+          const waitlistEntry = await this.prisma.waitlistEntry.findUnique({
+            where: { email: emailForWaitlist },
           });
-        } */
+          if (waitlistEntry?.invitedAt) {
+            const clientCount = await this.prisma.client.count({
+              where: { userId: user.id },
+            });
+            user = await this.prisma.user.update({
+              where: { id: user.id },
+              data: {
+                status: UserStatus.ACTIVE,
+                plan: UserPlan.BETA,
+                ...(clientCount === 0 && {
+                  clients: {
+                    create: {
+                      name:
+                        user.name ||
+                        userData.name ||
+                        emailForWaitlist.split('@')[0],
+                    },
+                  },
+                }),
+              },
+            });
+            this.logger.log(
+              `Activated waitlisted user ${user.id} (waitlist invite was sent)`,
+            );
+          }
+        }
 
         return user;
       }
