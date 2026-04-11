@@ -13,9 +13,13 @@ import {
   UpdatePublicCommentDto,
 } from './dto/public-comment.dto';
 import { SharePermission } from '@prisma/client';
+import { StorageService } from '../shared/storage/storage.service';
 
 // 15 minutes in milliseconds
 const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
+
+/** Anonymous viewers need long-lived signed URLs (private R2 bucket). */
+const SHARED_DRAFT_REFERENCE_SIGNED_TTL_SEC = 604800; // 7 days
 
 interface ShareFilterScope {
   platforms: string[];
@@ -29,6 +33,7 @@ export class PublicShareService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shareLinkService: ShareLinkService,
+    private readonly storageService: StorageService,
   ) {}
 
   private parseFilterScope(filterScope: unknown): ShareFilterScope | null {
@@ -170,7 +175,7 @@ export class PublicShareService {
     });
 
     // Always include drafts so clients can review and approve all planned content
-    const drafts = await this.prisma.draft.findMany({
+    const draftsRaw = await this.prisma.draft.findMany({
       where: { clientId },
       select: {
         id: true,
@@ -183,9 +188,31 @@ export class PublicShareService {
         notes: true,
         referenceUrl: true,
         referenceImageUrl: true,
+        referenceImageKey: true,
       },
       orderBy: { date: 'asc' },
     });
+
+    const drafts = await Promise.all(
+      draftsRaw.map(async (row) => {
+        const { referenceImageKey, ...rest } = row;
+        if (referenceImageKey) {
+          try {
+            const referenceImageUrl = await this.storageService.getSignedUrl(
+              referenceImageKey,
+              SHARED_DRAFT_REFERENCE_SIGNED_TTL_SEC,
+            );
+            return { ...rest, referenceImageUrl };
+          } catch (err) {
+            this.logger.warn(
+              { err, draftId: row.id },
+              'Failed to sign draft reference image for shared calendar',
+            );
+          }
+        }
+        return rest;
+      }),
+    );
 
     const calendar = { ...calendarMeta, contents, drafts };
 

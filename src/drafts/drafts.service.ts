@@ -6,6 +6,10 @@ import {
   UpdateDraftDto,
   ListDraftsQueryDto,
 } from './dto/draft.dto';
+import { Draft } from '@prisma/client';
+
+/** Signed GET URLs so reference images work when the bucket is not publicly readable. */
+const REFERENCE_IMAGE_SIGNED_TTL_SEC = 86400; // 24 hours
 
 @Injectable()
 export class DraftsService {
@@ -13,6 +17,21 @@ export class DraftsService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
   ) {}
+
+  private async withSignedReferenceImageUrl<T extends Draft>(draft: T): Promise<T> {
+    if (!draft.referenceImageKey) {
+      return draft;
+    }
+    try {
+      const referenceImageUrl = await this.storageService.getSignedUrl(
+        draft.referenceImageKey,
+        REFERENCE_IMAGE_SIGNED_TTL_SEC,
+      );
+      return { ...draft, referenceImageUrl };
+    } catch {
+      return draft;
+    }
+  }
 
   async create(userId: string, clientId: string, dto: CreateDraftDto) {
     if (dto.calendarId) {
@@ -26,7 +45,7 @@ export class DraftsService {
       }
     }
 
-    return this.prisma.draft.create({
+    const created = await this.prisma.draft.create({
       data: {
         userId,
         clientId,
@@ -43,6 +62,7 @@ export class DraftsService {
         referenceImageKey: dto.referenceImageKey,
       },
     });
+    return this.withSignedReferenceImageUrl(created);
   }
 
   async findAll(clientId: string, query: ListDraftsQueryDto) {
@@ -58,10 +78,14 @@ export class DraftsService {
       if (query.to) where.date.lte = new Date(query.to);
     }
 
-    const data = await this.prisma.draft.findMany({
+    const rows = await this.prisma.draft.findMany({
       where,
       orderBy: { date: 'asc' },
     });
+
+    const data = await Promise.all(
+      rows.map((d) => this.withSignedReferenceImageUrl(d)),
+    );
 
     return { data };
   }
@@ -75,7 +99,7 @@ export class DraftsService {
       throw new NotFoundException(`Draft ${id} not found`);
     }
 
-    return draft;
+    return this.withSignedReferenceImageUrl(draft);
   }
 
   async update(id: string, clientId: string, dto: UpdateDraftDto) {
@@ -118,7 +142,8 @@ export class DraftsService {
       data.referenceImageKey = dto.referenceImageKey ?? null;
     }
 
-    return this.prisma.draft.update({ where: { id }, data });
+    const updated = await this.prisma.draft.update({ where: { id }, data });
+    return this.withSignedReferenceImageUrl(updated);
   }
 
   async remove(id: string, clientId: string): Promise<void> {
