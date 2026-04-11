@@ -76,6 +76,8 @@ export class CalendarService {
   }
 
   async listCalendars(clientId: string): Promise<CalendarBasic[]> {
+    await this.ensureDefaultCalendarForClient(clientId);
+
     return this.prisma.calendar.findMany({
       where: { clientId },
       include: {
@@ -85,6 +87,36 @@ export class CalendarService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Every client has at least one calendar row for share links, kanban, etc.
+   * Users should not have to manually "create a calendar" before using the product.
+   */
+  private async ensureDefaultCalendarForClient(clientId: string): Promise<void> {
+    const existing = await this.prisma.calendar.findFirst({
+      where: { clientId },
+      select: { id: true },
+    });
+    if (existing) return;
+
+    const user = this.cls.get('user') as { id: string } | undefined;
+    if (!user?.id) {
+      this.logger.warn(
+        `Skipping default calendar for client ${clientId}: no authenticated user in CLS`,
+      );
+      return;
+    }
+
+    await this.prisma.calendar.create({
+      data: {
+        userId: user.id,
+        clientId,
+        name: 'Calendar',
+        description: null,
+      },
+    });
+    this.logger.log(`Default calendar ensured for client ${clientId}`);
   }
 
   async getCalendar(
