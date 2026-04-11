@@ -1,19 +1,25 @@
-import { IsString, IsUrl, IsNotEmpty, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsUrl,
+  IsNotEmpty,
+  IsDateString,
+  IsOptional,
+} from 'class-validator';
 
 export class CreatePostDto {
   @IsUrl({}, { message: 'image_url must be a valid URL' })
   @IsNotEmpty({ message: 'image_url is required' })
   image_url: string;
 
+  @IsOptional()
   @IsString({ message: 'caption must be a string' })
-  @IsNotEmpty({ message: 'caption is required' })
-  caption: string;
+  caption?: string;
 }
 
 export class SchedulePostDto {
+  @IsOptional()
   @IsString({ message: 'caption must be a string' })
-  @IsNotEmpty({ message: 'caption is required' })
-  caption: string;
+  caption?: string;
 
   @IsUrl({}, { message: 'mediaUrl must be a valid URL' })
   @IsNotEmpty({ message: 'mediaUrl is required' })

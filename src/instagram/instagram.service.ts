@@ -77,7 +77,7 @@ export class InstagramService {
 
     const params = new URLSearchParams();
     params.append('image_url', createPostDto.image_url);
-    params.append('caption', createPostDto.caption);
+    params.append('caption', createPostDto.caption ?? '');
     params.append('access_token', this.accessToken);
 
     try {

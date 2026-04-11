@@ -25,7 +25,7 @@ import {
  * - PULL_FROM_URL → `video_url` is required; TikTok pulls the video from the given URL.
  *
  * TikTok-specific constraints:
- * - `title` maps to the video description / caption (max 150 chars).
+ * - `title` maps to the video description / caption (max 150 chars; optional / may be empty).
  * - `privacy_level` must be one the creator's account supports
  *   (validated at runtime via TiktokCreatorService).
  * - `disable_comment`, `disable_duet`, `disable_stitch` let the publisher
@@ -35,7 +35,6 @@ export class InitDirectPostDto {
   // ── Post info ───────────────────────────────────────────────────
 
   @IsString()
-  @IsNotEmpty()
   @MaxLength(150, {
     message: 'TikTok video title must be 150 characters or fewer',
   })
