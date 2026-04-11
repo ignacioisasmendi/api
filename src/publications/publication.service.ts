@@ -43,8 +43,6 @@ const PUBLICATION_SELECT = {
   contentId: true,
   socialAccountId: true,
   campaignId: true,
-  kanbanColumnId: true,
-  kanbanOrder: true,
   createdAt: true,
   updatedAt: true,
   campaign: {
@@ -368,45 +366,6 @@ export class PublicationService {
     take: number,
   ): Promise<PublicationWithRelations[]> {
     return this.getPublicationsToPublish(take);
-  }
-
-  async moveToKanbanColumn(
-    id: string,
-    clientId: string,
-    dto: { columnId?: string | null; kanbanOrder?: number },
-  ) {
-    const publication = await this.prisma.publication.findFirst({
-      where: { id, content: { clientId } },
-      select: { id: true, content: { select: { calendarId: true } } },
-    });
-
-    if (!publication) {
-      throw new NotFoundException(`Publication ${id} not found`);
-    }
-
-    if (dto.columnId) {
-      const column = await this.prisma.kanbanColumn.findFirst({
-        where: {
-          id: dto.columnId,
-          calendarId: publication.content.calendarId!,
-        },
-      });
-
-      if (!column) {
-        throw new BadRequestException(
-          `Column ${dto.columnId} not found in this calendar`,
-        );
-      }
-    }
-
-    return this.prisma.publication.update({
-      where: { id },
-      data: {
-        kanbanColumnId: dto.columnId ?? null,
-        ...(dto.kanbanOrder !== undefined && { kanbanOrder: dto.kanbanOrder }),
-      },
-      select: PUBLICATION_SELECT,
-    });
   }
 
   async updatePublicationStatus(

@@ -126,15 +126,6 @@ export class UpdatePublicationDto {
   mediaIds?: PublicationMediaDto[];
 }
 
-export class MoveKanbanDto {
-  @IsString()
-  @IsOptional()
-  columnId?: string | null;
-
-  @IsOptional()
-  kanbanOrder?: number;
-}
-
 export class PublicationResponseDto {
   id: string;
   contentId: string;

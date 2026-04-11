@@ -21,7 +21,6 @@ import { EncryptionModule } from './shared/encryption/encryption.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TiktokModule } from './tiktok/tiktok.module';
 import { CalendarModule } from './calendars/calendar.module';
-import { KanbanColumnModule } from './kanban-columns/kanban-column.module';
 import { ShareLinkModule } from './share-links/share-link.module';
 import { PublicShareModule } from './public-share/public-share.module';
 import { ClientModule } from './clients/client.module';
@@ -96,7 +95,6 @@ import { SentryGlobalFilter } from '@sentry/nestjs/setup';
     AnalyticsModule,
     TiktokModule,
     CalendarModule,
-    KanbanColumnModule,
     ShareLinkModule,
     PublicShareModule,
     ClientModule,

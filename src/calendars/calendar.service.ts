@@ -52,7 +52,7 @@ export class CalendarService {
   }
 
   /**
-   * Every client has at least one calendar row for share links, kanban, etc.
+   * Every client has at least one calendar row for share links, etc.
    */
   private async ensureDefaultCalendarForClient(clientId: string): Promise<void> {
     const existing = await this.prisma.calendar.findFirst({

@@ -145,8 +145,6 @@ export class PublicShareService {
             status: true,
             customCaption: true,
             link: true,
-            kanbanColumnId: true,
-            kanbanOrder: true,
             mediaUsage: {
               select: {
                 id: true,
