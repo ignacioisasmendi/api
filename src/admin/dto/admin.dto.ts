@@ -150,3 +150,20 @@ export interface AdminWaitlistGrowthPoint {
   date: string;
   signups: number;
 }
+
+export class AdminUserPublicationsQueryDto extends PaginationDto {}
+
+export interface AdminUserPublication {
+  id: string;
+  platform: string;
+  format: string;
+  publishAt: Date;
+  status: string;
+  customCaption: string | null;
+  link: string | null;
+  error: string | null;
+  socialAccountUsername: string | null;
+  clientName: string;
+  campaignName: string | null;
+  contentCaption: string | null;
+}

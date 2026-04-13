@@ -6,6 +6,8 @@ import {
   AdminOverviewResponse,
   AdminUserDetail,
   AdminUserListItem,
+  AdminUserPublication,
+  AdminUserPublicationsQueryDto,
   AdminWaitlistEntry,
   AdminWaitlistGrowthPoint,
   AdminWaitlistInviteSend,
@@ -393,6 +395,66 @@ export class AdminService {
       data: { status },
       select: { id: true, email: true, plan: true, status: true },
     });
+  }
+
+  async getUserPublications(
+    userId: string,
+    query: AdminUserPublicationsQueryDto,
+  ): Promise<PaginatedResponse<AdminUserPublication>> {
+    const where = { content: { userId } };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.publication.findMany({
+        where,
+        skip: query.skip,
+        take: query.limit,
+        orderBy: { publishAt: 'desc' },
+        select: {
+          id: true,
+          platform: true,
+          format: true,
+          publishAt: true,
+          status: true,
+          customCaption: true,
+          link: true,
+          error: true,
+          socialAccount: { select: { username: true } },
+          campaign: { select: { name: true } },
+          content: {
+            select: {
+              caption: true,
+              client: { select: { name: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.publication.count({ where }),
+    ]);
+
+    const data: AdminUserPublication[] = rows.map((row) => ({
+      id: row.id,
+      platform: row.platform,
+      format: row.format,
+      publishAt: row.publishAt,
+      status: row.status,
+      customCaption: row.customCaption,
+      link: row.link,
+      error: row.error,
+      socialAccountUsername: row.socialAccount.username,
+      clientName: row.content.client.name,
+      campaignName: row.campaign?.name ?? null,
+      contentCaption: row.content.caption,
+    }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
   }
 
   private mergeGrowthSeries(

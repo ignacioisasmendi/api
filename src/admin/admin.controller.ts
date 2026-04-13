@@ -15,6 +15,7 @@ import { AdminGuard } from './admin.guard';
 import { SkipClientValidation } from '../decorators';
 import {
   AdminUsersQueryDto,
+  AdminUserPublicationsQueryDto,
   AdminWaitlistQueryDto,
   AdminWaitlistInviteSendsQueryDto,
   UpdateUserPlanDto,
@@ -51,6 +52,14 @@ export class AdminController {
   @Get('users/:id')
   getUserDetail(@Param('id') id: string) {
     return this.adminService.getUserDetail(id);
+  }
+
+  @Get('users/:id/publications')
+  getUserPublications(
+    @Param('id') id: string,
+    @Query() query: AdminUserPublicationsQueryDto,
+  ) {
+    return this.adminService.getUserPublications(id, query);
   }
 
   @Patch('users/:id/plan')
