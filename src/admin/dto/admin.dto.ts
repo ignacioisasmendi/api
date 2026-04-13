@@ -167,3 +167,16 @@ export interface AdminUserPublication {
   campaignName: string | null;
   contentCaption: string | null;
 }
+
+export class AdminUserContentsQueryDto extends PaginationDto {}
+
+export interface AdminUserContent {
+  id: string;
+  caption: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  clientName: string;
+  calendarName: string | null;
+  mediaCount: number;
+  publicationsCount: number;
+}

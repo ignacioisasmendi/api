@@ -16,6 +16,7 @@ import { SkipClientValidation } from '../decorators';
 import {
   AdminUsersQueryDto,
   AdminUserPublicationsQueryDto,
+  AdminUserContentsQueryDto,
   AdminWaitlistQueryDto,
   AdminWaitlistInviteSendsQueryDto,
   UpdateUserPlanDto,
@@ -60,6 +61,14 @@ export class AdminController {
     @Query() query: AdminUserPublicationsQueryDto,
   ) {
     return this.adminService.getUserPublications(id, query);
+  }
+
+  @Get('users/:id/contents')
+  getUserContents(
+    @Param('id') id: string,
+    @Query() query: AdminUserContentsQueryDto,
+  ) {
+    return this.adminService.getUserContents(id, query);
   }
 
   @Patch('users/:id/plan')

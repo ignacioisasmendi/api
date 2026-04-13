@@ -4,8 +4,10 @@ import { PaginatedResponse } from '../common/dto/pagination.dto';
 import {
   AdminGrowthPoint,
   AdminOverviewResponse,
+  AdminUserContent,
   AdminUserDetail,
   AdminUserListItem,
+  AdminUserContentsQueryDto,
   AdminUserPublication,
   AdminUserPublicationsQueryDto,
   AdminWaitlistEntry,
@@ -444,6 +446,53 @@ export class AdminService {
       clientName: row.content.client.name,
       campaignName: row.campaign?.name ?? null,
       contentCaption: row.content.caption,
+    }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
+  }
+
+  async getUserContents(
+    userId: string,
+    query: AdminUserContentsQueryDto,
+  ): Promise<PaginatedResponse<AdminUserContent>> {
+    const where = { userId };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.content.findMany({
+        where,
+        skip: query.skip,
+        take: query.limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          caption: true,
+          createdAt: true,
+          updatedAt: true,
+          client: { select: { name: true } },
+          calendar: { select: { name: true } },
+          _count: { select: { media: true, publications: true } },
+        },
+      }),
+      this.prisma.content.count({ where }),
+    ]);
+
+    const data: AdminUserContent[] = rows.map((row) => ({
+      id: row.id,
+      caption: row.caption,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      clientName: row.client.name,
+      calendarName: row.calendar?.name ?? null,
+      mediaCount: row._count.media,
+      publicationsCount: row._count.publications,
     }));
 
     return {
