@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginatedResponse } from '../common/dto/pagination.dto';
 import {
@@ -16,6 +21,7 @@ import {
   AdminWaitlistInviteSendsQueryDto,
   AdminUsersQueryDto,
   AdminWaitlistQueryDto,
+  AdminSocialAccountConflict,
   WaitlistInviteSendLogItemDto,
 } from './dto/admin.dto';
 import { UserPlan, UserStatus } from '@prisma/client';
@@ -154,12 +160,18 @@ export class AdminService {
         socialAccounts: {
           select: {
             id: true,
+            clientId: true,
             platform: true,
             username: true,
             isActive: true,
             expiresAt: true,
             disconnectedAt: true,
             createdAt: true,
+            client: {
+              select: {
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -167,7 +179,20 @@ export class AdminService {
       },
     });
 
-    return user as AdminUserDetail;
+    return {
+      ...user,
+      socialAccounts: user.socialAccounts.map((account) => ({
+        id: account.id,
+        clientId: account.clientId,
+        clientName: account.client.name,
+        platform: account.platform,
+        username: account.username,
+        isActive: account.isActive,
+        expiresAt: account.expiresAt,
+        disconnectedAt: account.disconnectedAt,
+        createdAt: account.createdAt,
+      })),
+    } as AdminUserDetail;
   }
 
   async getWaitlist(
@@ -397,6 +422,154 @@ export class AdminService {
       data: { status },
       select: { id: true, email: true, plan: true, status: true },
     });
+  }
+
+  async reassignSocialAccountClient(
+    userId: string,
+    socialAccountId: string,
+    targetClientId: string,
+  ) {
+    const socialAccount = await this.prisma.socialAccount.findFirst({
+      where: { id: socialAccountId, userId },
+      select: {
+        id: true,
+        userId: true,
+        clientId: true,
+        platform: true,
+        platformUserId: true,
+      },
+    });
+
+    if (!socialAccount) {
+      throw new NotFoundException('Social account not found for this user');
+    }
+
+    const targetClient = await this.prisma.client.findFirst({
+      where: { id: targetClientId, userId },
+      select: { id: true },
+    });
+
+    if (!targetClient) {
+      throw new BadRequestException('Target client does not belong to this user');
+    }
+
+    if (socialAccount.clientId === targetClientId) {
+      return {
+        socialAccountId,
+        previousClientId: socialAccount.clientId,
+        targetClientId,
+        movedPublications: 0,
+        movedContents: 0,
+        clearedCampaignRefs: 0,
+      };
+    }
+
+    const duplicateAccount = await this.prisma.socialAccount.findFirst({
+      where: {
+        id: { not: socialAccountId },
+        clientId: targetClientId,
+        platform: socialAccount.platform,
+        platformUserId: socialAccount.platformUserId,
+      },
+      select: { id: true },
+    });
+
+    if (duplicateAccount) {
+      throw new ConflictException(
+        'A social account with the same platform identity already exists for the target client',
+      );
+    }
+
+    const relatedPublications = await this.prisma.publication.findMany({
+      where: { socialAccountId },
+      select: {
+        id: true,
+        contentId: true,
+      },
+    });
+
+    const publicationIds = relatedPublications.map((publication) => publication.id);
+    const contentIds = [...new Set(relatedPublications.map((p) => p.contentId))];
+
+    let conflicts: AdminSocialAccountConflict[] = [];
+    if (contentIds.length > 0) {
+      const conflictingPublications = await this.prisma.publication.findMany({
+        where: {
+          contentId: { in: contentIds },
+          socialAccountId: { not: socialAccountId },
+        },
+        select: {
+          id: true,
+          contentId: true,
+          socialAccountId: true,
+          socialAccount: {
+            select: {
+              platform: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      conflicts = conflictingPublications.map((publication) => ({
+        publicationId: publication.id,
+        contentId: publication.contentId,
+        conflictingSocialAccountId: publication.socialAccountId,
+        conflictingPlatform: publication.socialAccount.platform,
+        conflictingUsername: publication.socialAccount.username,
+      }));
+    }
+
+    if (conflicts.length > 0) {
+      throw new ConflictException({
+        message:
+          'Cannot move this social account because related content is shared with other social accounts',
+        conflicts,
+      });
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedSocialAccount = await tx.socialAccount.update({
+        where: { id: socialAccountId },
+        data: { clientId: targetClientId },
+        select: { id: true },
+      });
+
+      const clearedCampaignRefs = await tx.publication.updateMany({
+        where: {
+          socialAccountId,
+          campaign: { clientId: socialAccount.clientId },
+        },
+        data: { campaignId: null },
+      });
+
+      const movedContents =
+        contentIds.length === 0
+          ? { count: 0 }
+          : await tx.content.updateMany({
+              where: {
+                id: { in: contentIds },
+                userId,
+                clientId: socialAccount.clientId,
+              },
+              data: { clientId: targetClientId },
+            });
+
+      return {
+        updatedSocialAccountId: updatedSocialAccount.id,
+        movedContentsCount: movedContents.count,
+        clearedCampaignRefsCount: clearedCampaignRefs.count,
+      };
+    });
+
+    return {
+      socialAccountId: result.updatedSocialAccountId,
+      previousClientId: socialAccount.clientId,
+      targetClientId,
+      movedPublications: publicationIds.length,
+      movedContents: result.movedContentsCount,
+      clearedCampaignRefs: result.clearedCampaignRefsCount,
+    };
   }
 
   async getUserPublications(

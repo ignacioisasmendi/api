@@ -21,6 +21,7 @@ import {
   AdminWaitlistInviteSendsQueryDto,
   UpdateUserPlanDto,
   UpdateUserStatusDto,
+  ReassignSocialAccountDto,
   InviteBulkDto,
   WaitlistInviteSendLogBatchDto,
 } from './dto/admin.dto';
@@ -79,6 +80,19 @@ export class AdminController {
   @Patch('users/:id/status')
   updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
     return this.adminService.updateUserStatus(id, dto.status);
+  }
+
+  @Patch('users/:userId/social-accounts/:socialAccountId/client')
+  reassignSocialAccountClient(
+    @Param('userId') userId: string,
+    @Param('socialAccountId') socialAccountId: string,
+    @Body() dto: ReassignSocialAccountDto,
+  ) {
+    return this.adminService.reassignSocialAccountClient(
+      userId,
+      socialAccountId,
+      dto.targetClientId,
+    );
   }
 
   @Get('waitlist/export')

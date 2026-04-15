@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsArray,
   IsBoolean,
+  IsNotEmpty,
   ValidateNested,
 } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -30,6 +31,12 @@ export class UpdateUserPlanDto {
 export class UpdateUserStatusDto {
   @IsEnum(UserStatus)
   status: UserStatus;
+}
+
+export class ReassignSocialAccountDto {
+  @IsString()
+  @IsNotEmpty()
+  targetClientId: string;
 }
 
 export class InviteBulkDto {
@@ -118,6 +125,8 @@ export interface AdminUserDetail {
   }[];
   socialAccounts: {
     id: string;
+    clientId: string;
+    clientName: string;
     platform: string;
     username: string | null;
     isActive: boolean;
@@ -126,6 +135,14 @@ export interface AdminUserDetail {
     createdAt: Date;
   }[];
   _count: { contents: number };
+}
+
+export interface AdminSocialAccountConflict {
+  publicationId: string;
+  contentId: string;
+  conflictingSocialAccountId: string;
+  conflictingPlatform: string;
+  conflictingUsername: string | null;
 }
 
 export interface AdminWaitlistEntry {
