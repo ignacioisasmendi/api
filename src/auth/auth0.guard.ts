@@ -109,9 +109,10 @@ export class Auth0Guard implements CanActivate {
       return true;
     } catch (error) {
       this.logger.error('Token validation failed', error);
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+      throw error;
+    } 
   }
+
 
   private extractTokenFromHeader(request: any): string | undefined {
     const authHeader = request.headers.authorization;

@@ -12,8 +12,8 @@ model User {
   email          String          @unique
   name           String?
   avatar         String?
-  plan           UserPlan        @default(BETA)
-  status         UserStatus      @default(ACTIVE)
+  plan           UserPlan        @default(FREE)
+  status         UserStatus      @default(WAITLISTED)
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
   calendars      Calendar[]
