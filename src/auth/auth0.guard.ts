@@ -96,7 +96,8 @@ export class Auth0Guard implements CanActivate {
 
       // Check email verification before other status checks
       if (!user.emailVerified) {
-        throw new UnauthorizedException('Email not verified');
+        this.logger.error('Email not verified for user', { user });
+        //throw new UnauthorizedException('Email not verified');
       }
 
       // Check user status — block suspended or waitlisted users
