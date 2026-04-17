@@ -1,8 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { Auth0Guard } from './auth0.guard';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
 import { UserModule } from '../users/user.module';
-import { PassportModule } from '@nestjs/passport';
 
 @Global()
 @Module({
@@ -12,7 +13,8 @@ import { PassportModule } from '@nestjs/passport';
     }),
     UserModule,
   ],
-  providers: [Auth0Guard],
-  exports: [Auth0Guard, JwtModule],
+  controllers: [AuthController],
+  providers: [Auth0Guard, AuthService],
+  exports: [Auth0Guard, JwtModule, AuthService],
 })
 export class AuthModule {}

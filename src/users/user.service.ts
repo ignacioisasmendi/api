@@ -10,6 +10,7 @@ export interface UserResponse {
   avatar: string | null;
   plan: UserPlan;
   status: UserStatus;
+  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +20,7 @@ export interface CreateUserData {
   email: string;
   name?: string;
   avatar?: string;
+  emailVerified?: boolean;
 }
 
 @Injectable()
@@ -42,6 +44,20 @@ export class UserService {
       });
 
       if (user) {
+        // Update emailVerified if it changed (e.g. user just verified)
+        if (
+          userData.emailVerified !== undefined &&
+          userData.emailVerified !== user.emailVerified
+        ) {
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerified: userData.emailVerified },
+          });
+          this.logger.log(
+            `Updated emailVerified=${userData.emailVerified} for user ${user.id}`,
+          );
+        }
+
         // If they were waitlisted but admin already invited (invitedAt set), activate now.
         // Matches invite email timing so the next login works even if the admin upsert missed.
         const emailForWaitlist = (userData.email || user.email || '').trim();
@@ -100,6 +116,7 @@ export class UserService {
           email: userData.email,
           name: userData.name,
           avatar: userData.avatar,
+          emailVerified: userData.emailVerified ?? false,
           plan,
           status,
         },
@@ -161,6 +178,7 @@ export class UserService {
       avatar: user.avatar,
       plan: user.plan,
       status: user.status,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

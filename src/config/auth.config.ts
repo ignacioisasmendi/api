@@ -5,4 +5,6 @@ export default registerAs('auth', () => ({
   auth0Audience: process.env.AUTH0_AUDIENCE,
   auth0Issuer:
     process.env.AUTH0_ISSUER || `https://${process.env.AUTH0_DOMAIN}/`,
+  auth0ClientId: process.env.AUTH0_CLIENT_ID,
+  auth0ClientSecret: process.env.AUTH0_CLIENT_SECRET,
 }));

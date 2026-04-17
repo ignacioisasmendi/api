@@ -83,6 +83,7 @@ export class Auth0Guard implements CanActivate {
       const email = payload.email;
       const name = payload.name;
       const picture = payload.picture;
+      const emailVerified = payload.email_verified ?? false;
 
       // Buscar o crear el usuario en la base de datos (auto-provisioning)
       const user = await this.userService.findOrCreateUser({
@@ -90,7 +91,13 @@ export class Auth0Guard implements CanActivate {
         email: email || '',
         name,
         avatar: picture,
+        emailVerified,
       });
+
+      // Check email verification before other status checks
+      if (!user.emailVerified) {
+        throw new UnauthorizedException('Email not verified');
+      }
 
       // Check user status — block suspended or waitlisted users
       if (user.status === 'SUSPENDED') {

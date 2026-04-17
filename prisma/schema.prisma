@@ -14,6 +14,7 @@ model User {
   avatar         String?
   plan           UserPlan        @default(FREE)
   status         UserStatus      @default(WAITLISTED)
+  emailVerified  Boolean         @default(false)
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
   calendars      Calendar[]
