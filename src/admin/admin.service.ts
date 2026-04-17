@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +30,8 @@ import { format, subDays, eachDayOfInterval } from 'date-fns';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getOverview(): Promise<AdminOverviewResponse> {
@@ -406,6 +409,15 @@ export class AdminService {
         totalPages: Math.ceil(total / query.limit),
       },
     };
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.prisma.user.delete({ where: { id: userId } });
+    this.logger.log(`Admin deleted user ${userId} (${user.email})`);
   }
 
   async updateUserPlan(userId: string, plan: UserPlan) {

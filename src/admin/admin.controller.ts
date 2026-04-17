@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Patch,
@@ -70,6 +71,12 @@ export class AdminController {
     @Query() query: AdminUserContentsQueryDto,
   ) {
     return this.adminService.getUserContents(id, query);
+  }
+
+  @Delete('users/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteUser(@Param('id') id: string) {
+    return this.adminService.deleteUser(id);
   }
 
   @Patch('users/:id/plan')
